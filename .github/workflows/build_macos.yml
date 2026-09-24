@@ -1,0 +1,60 @@
+name: Build macOS Application (.app & .dmg)
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch: # Allows manual trigger from GitHub Actions tab
+
+jobs:
+  build-macos:
+    name: Build macOS (.app & .dmg)
+    runs-on: macos-latest
+
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🐦 Set up Flutter SDK
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: 📦 Get Dependencies
+        run: flutter pub get
+
+      - name: ⚙️ Build macOS Release Application
+        run: flutter build macos --release
+
+      - name: 💿 Create DMG Installer and ZIP Bundle
+        run: |
+          APP_PATH="build/macos/Build/Products/Release/madarsa_app.app"
+          
+          # 1. Create ZIP of .app
+          zip -r -9 "Madarsa_App_macOS.zip" "$APP_PATH"
+          
+          # 2. Create standalone installer DMG with Applications shortcut
+          mkdir -p dmg_folder
+          cp -R "$APP_PATH" dmg_folder/
+          ln -s /Applications dmg_folder/Applications
+          
+          hdiutil create \
+            -volname "Madarsa Management System" \
+            -srcfolder dmg_folder \
+            -ov \
+            -format UDZO \
+            "Madarsa_App_v0.0.0.3_macOS.dmg"
+
+      - name: 📤 Upload DMG Installer Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Madarsa-App-macOS-Installer-DMG
+          path: Madarsa_App_v0.0.0.3_macOS.dmg
+          retention-days: 30
+
+      - name: 📤 Upload .app ZIP Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Madarsa-App-macOS-Bundle-ZIP
+          path: Madarsa_App_macOS.zip
+          retention-days: 30

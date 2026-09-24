@@ -1,0 +1,61 @@
+name: madarsa_app
+description: "A new Flutter project."
+publish_to: 'none'
+version: 0.0.0+3
+
+environment:
+  sdk: ^3.11.4
+
+dependencies:
+  dio: ^5.9.2
+  equatable: ^2.0.8
+  flutter:
+    sdk: flutter
+  flutter_bloc: ^9.1.1
+  flutter_localizations:
+    sdk: flutter
+  go_router: ^17.2.1
+  google_fonts: ^8.0.2
+  hijri: ^3.0.0
+  intl: ^0.20.2
+  shared_preferences: ^2.5.5
+  sqflite: ^2.4.2
+  sqflite_common_ffi: ^2.4.0+2
+  path_provider: ^2.1.5
+  path: ^1.9.1
+  file_picker: ^8.1.7
+  fl_chart: ^0.71.0
+  pdf: ^3.12.0
+  printing: ^5.14.3
+  arabic_reshaper: ^0.0.1
+  qr_flutter: ^4.1.0
+  url_launcher: ^6.3.2
+  crypto: ^3.0.3
+  ffi: ^2.1.2
+  win32: ^5.15.0
+  sqlite3_flutter_libs: ^0.6.0+eol
+  camera: ^0.12.0+2
+  camera_windows: ^0.2.6+5
+  image: ^4.8.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/images/
+
+  fonts:
+    - family: JameelNooriNastaleeq
+      fonts:
+        - asset: assets/fonts/JameelNooriNastaleeq.ttf
+    - family: Jameel Noori Nastaleeq
+      fonts:
+        - asset: assets/fonts/JameelNooriNastaleeq.ttf
+    - family: Jameel Noori Kasheeda
+      fonts:
+        - asset: assets/fonts/JameelNooriNastaleeq.ttf

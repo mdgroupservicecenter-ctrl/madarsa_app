@@ -1,0 +1,932 @@
+Resolving dependencies...
+Downloading packages...
+  archive 4.0.9 (4.2.0 available)
+  bloc 9.2.0 (9.2.1 available)
+  clock 1.1.2 (1.1.3 available)
+  code_assets 1.0.0 (2.0.0 available)
+  cross_file 0.3.5+2 (0.3.5+5 available)
+  dio 5.9.2 (5.11.1 available)
+  dio_web_adapter 2.1.2 (2.2.2 available)
+  equatable 2.0.8 (2.1.0 available)
+  file_picker 8.3.7 (12.3.0 available)
+  fl_chart 0.71.0 (1.2.0 available)
+  flutter_plugin_android_lifecycle 2.0.34 (2.0.35 available)
+  glob 2.1.3 (2.2.0 available)
+  go_router 17.2.1 (18.0.1 available)
+  google_fonts 8.0.2 (8.2.1 available)
+  hijri 3.0.0 (3.0.1 available)
+  hooks 1.0.2 (2.2.0 available)
+  image 4.8.0 (4.9.2 available)
+  intl 0.20.2 (0.20.3 available)
+  jni 1.0.0 (1.0.3 available)
+  jni_flutter 1.0.1 (1.0.3 available)
+  matcher 0.12.19 (0.12.20 available)
+  material_color_utilities 0.13.0 (0.13.1 available)
+  meta 1.17.0 (1.19.0 available)
+  mime 2.0.0 (2.1.0 available)
+  native_toolchain_c 0.17.6 (0.19.4 available)
+  objective_c 9.3.0 (9.6.0 available)
+  package_config 2.2.0 (3.0.0 available)
+  path_provider 2.1.5 (2.1.6 available)
+  path_provider_linux 2.2.1 (2.2.2 available)
+  path_provider_platform_interface 2.1.2 (2.1.3 available)
+  pdf 3.12.0 (3.13.0 available)
+  platform 3.1.6 (3.2.0 available)
+  posix 6.5.0 (6.5.2 available)
+  printing 5.14.3 (5.15.0 available)
+  pub_semver 2.2.0 (2.2.1 available)
+  qr 3.0.2 (4.0.0 available)
+  shared_preferences_android 2.4.23 (2.4.28 available)
+  shared_preferences_foundation 2.5.6 (2.5.7 available)
+  sqflite 2.4.2 (2.4.4 available)
+  sqflite_android 2.4.2+3 (2.4.4 available)
+  sqflite_common 2.5.6 (2.5.12 available)
+  sqflite_common_ffi 2.4.0+2 (2.4.3 available)
+  sqflite_darwin 2.4.2 (2.4.4 available)
+  sqflite_platform_interface 2.4.0 (2.4.2 available)
+  sqlite3 3.3.1 (3.5.2 available)
+  stack_trace 1.12.1 (1.12.2 available)
+  synchronized 3.4.0 (3.4.2 available)
+  test_api 0.7.10 (0.7.14 available)
+  url_launcher_android 6.3.30 (6.3.33 available)
+  url_launcher_ios 6.4.1 (6.4.2 available)
+  url_launcher_linux 3.2.2 (3.2.3 available)
+  url_launcher_macos 3.2.5 (3.2.6 available)
+  url_launcher_windows 3.1.5 (3.1.6 available)
+  vector_math 2.2.0 (2.4.2 available)
+  vm_service 15.0.2 (15.3.0 available)
+  win32 5.15.0 (6.4.0 available)
+  xml 6.6.1 (7.0.1 available)
+  yaml 3.1.3 (3.1.4 available)
+Got dependencies!
+58 packages have newer versions incompatible with dependency constraints.
+Try `flutter pub outdated` for more information.
+00:00 +0: loading d:/MD Group/madarsa_app/test/test_dialog.dart
+00:00 +0: Test AddEditMenuDialog build
+══╡ EXCEPTION CAUGHT BY RENDERING LIBRARY ╞═════════════════════════════════════════════════════════
+The following assertion was thrown during performLayout():
+RenderShrinkWrappingViewport does not support returning intrinsic dimensions.
+Calculating the intrinsic dimensions would require instantiating every child of the viewport, which
+defeats the point of viewports being lazy.
+If you are merely trying to shrink-wrap the viewport in the main axis direction, you should be able
+to achieve that effect by just giving the viewport loose constraints, without needing to measure its
+intrinsic dimensions.
+
+The relevant error-causing widget was:
+  AlertDialog
+  AlertDialog:file:///d:/MD%20Group/madarsa_app/lib/features/kitchen/presentation/screens/kitchen_screen.dart:2675:12
+
+When the exception was thrown, this was the stack:
+#0      RenderShrinkWrappingViewport.debugThrowIfNotCheckingIntrinsics.<anonymous closure> (package:flutter/src/rendering/viewport.dart:1884:9)
+#1      RenderShrinkWrappingViewport.debugThrowIfNotCheckingIntrinsics (package:flutter/src/rendering/viewport.dart:1898:6)
+#2      RenderViewportBase.computeMaxIntrinsicHeight (package:flutter/src/rendering/viewport.dart:599:12)
+#3      _IntrinsicDimension.memoize.<anonymous closure> (package:flutter/src/rendering/box.dart:1117:51)
+#4      _LinkedHashMapMixin.putIfAbsent (dart:_compact_hash:675:23)
+#5      _IntrinsicDimension.memoize (package:flutter/src/rendering/box.dart:1117:10)
+#6      RenderBox._computeWithTimeline (package:flutter/src/rendering/box.dart:1620:32)
+#7      RenderBox._computeIntrinsics (package:flutter/src/rendering/box.dart:1598:26)
+#8      RenderBox.getMaxIntrinsicHeight (package:flutter/src/rendering/box.dart:1956:12)
+#9      RenderProxyBoxMixin.computeMaxIntrinsicHeight (package:flutter/src/rendering/proxy_box.dart:93:19)
+#10     _IntrinsicDimension.memoize.<anonymous closure> (package:flutter/src/rendering/box.dart:1117:51)
+#11     _LinkedHashMapMixin.putIfAbsent (dart:_compact_hash:675:23)
+#12     _IntrinsicDimension.memoize (package:flutter/src/rendering/box.dart:1117:10)
+#13     RenderBox._computeWithTimeline (package:flutter/src/rendering/box.dart:1620:32)
+#14     RenderBox._computeIntrinsics (package:flutter/src/rendering/box.dart:1598:26)
+#15     RenderBox.getMaxIntrinsicHeight (package:flutter/src/rendering/box.dart:1956:12)
+#16     RenderProxyBoxMixin.computeMaxIntrinsicHeight (package:flutter/src/rendering/proxy_box.dart:93:19)
+#17     _IntrinsicDimension.memoize.<anonymous closure> (package:flutter/src/rendering/box.dart:1117:51)
+#18     _LinkedHashMapMixin.putIfAbsent (dart:_compact_hash:675:23)
+#19     _IntrinsicDimension.memoize (package:flutter/src/rendering/box.dart:1117:10)
+#20     RenderBox._computeWithTimeline (package:flutter/src/rendering/box.dart:1620:32)
+#21     RenderBox._computeIntrinsics (package:flutter/src/rendering/box.dart:1598:26)
+#22     RenderBox.getMaxIntrinsicHeight (package:flutter/src/rendering/box.dart:1956:12)
+#23     RenderProxyBoxMixin.computeMaxIntrinsicHeight (package:flutter/src/rendering/proxy_box.dart:93:19)
+#24     _IntrinsicDimension.memoize.<anonymous closure> (package:flutter/src/rendering/box.dart:1117:51)
+#25     _LinkedHashMapMixin.putIfAbsent (dart:_compact_hash:675:23)
+#26     _IntrinsicDimension.memoize (package:flutter/src/rendering/box.dart:1117:10)
+#27     RenderBox._computeWithTimeline (package:flutter/src/rendering/box.dart:1620:32)
+#28     RenderBox._computeIntrinsics (package:flutter/src/rendering/box.dart:1598:26)
+#29     RenderBox.getMaxIntrinsicHeight (package:flutter/src/rendering/box.dart:1956:12)
+#30     RenderProxyBoxMixin.computeMaxIntrinsicHeight (package:flutter/src/rendering/proxy_box.dart:93:19)
+#31     _IntrinsicDimension.memoize.<anonymous closure> (package:flutter/src/rendering/box.dart:1117:51)
+#32     _LinkedHashMapMixin.putIfAbsent (dart:_compact_hash:675:23)
+#33     _IntrinsicDimension.memoize (package:flutter/src/rendering/box.dart:1117:10)
+#34     RenderBox._computeWithTimeline (package:flutter/src/rendering/box.dart:1620:32)
+#35     RenderBox._computeIntrinsics (package:flutter/src/rendering/box.dart:1598:26)
+#36     RenderBox.getMaxIntrinsicHeight (package:flutter/src/rendering/box.dart:1956:12)
+#37     RenderProxyBoxMixin.computeMaxIntrinsicHeight (package:flutter/src/rendering/proxy_box.dart:93:19)
+#38     _IntrinsicDimension.memoize.<anonymous closure> (package:flutter/src/rendering/box.dart:1117:51)
+#39     _LinkedHashMapMixin.putIfAbsent (dart:_compact_hash:675:23)
+#40     _IntrinsicDimension.memoize (package:flutter/src/rendering/box.dart:1117:10)
+#41     RenderBox._computeWithTimeline (package:flutter/src/rendering/box.dart:1620:32)
+#42     RenderBox._computeIntrinsics (package:flutter/src/rendering/box.dart:1598:26)
+#43     RenderBox.getMaxIntrinsicHeight (package:flutter/src/rendering/box.dart:1956:12)
+#44     RenderProxyBoxMixin.computeMaxIntrinsicHeight (package:flutter/src/rendering/proxy_box.dart:93:19)
+#45     _IntrinsicDimension.memoize.<anonymous closure> (package:flutter/src/rendering/box.dart:1117:51)
+#46     _LinkedHashMapMixin.putIfAbsent (dart:_compact_hash:675:23)
+#47     _IntrinsicDimension.memoize (package:flutter/src/rendering/box.dart:1117:10)
+#48     RenderBox._computeWithTimeline (package:flutter/src/rendering/box.dart:1620:32)
+#49     RenderBox._computeIntrinsics (package:flutter/src/rendering/box.dart:1598:26)
+#50     RenderBox.getMaxIntrinsicHeight (package:flutter/src/rendering/box.dart:1956:12)
+#51     RenderProxyBoxMixin.computeMaxIntrinsicHeight (package:flutter/src/rendering/proxy_box.dart:93:19)
+#52     _IntrinsicDimension.memoize.<anonymous closure> (package:flutter/src/rendering/box.dart:1117:51)
+#53     _LinkedHashMapMixin.putIfAbsent (dart:_compact_hash:675:23)
+#54     _IntrinsicDimension.memoize (package:flutter/src/rendering/box.dart:1117:10)
+#55     RenderBox._computeWithTimeline (package:flutter/src/rendering/box.dart:1620:32)
+#56     RenderBox._computeIntrinsics (package:flutter/src/rendering/box.dart:1598:26)
+#57     RenderBox.getMaxIntrinsicHeight (package:flutter/src/rendering/box.dart:1956:12)
+#58     RenderProxyBoxMixin.computeMaxIntrinsicHeight (package:flutter/src/rendering/proxy_box.dart:93:19)
+#59     _IntrinsicDimension.memoize.<anonymous closure> (package:flutter/src/rendering/box.dart:1117:51)
+#60     _LinkedHashMapMixin.putIfAbsent (dart:_compact_hash:675:23)
+#61     _IntrinsicDimension.memoize (package:flutter/src/rendering/box.dart:1117:10)
+#62     RenderBox._computeWithTimeline (package:flutter/src/rendering/box.dart:1620:32)
+#63     RenderBox._computeIntrinsics (package:flutter/src/rendering/box.dart:1598:26)
+#64     RenderBox.getMaxIntrinsicHeight (package:flutter/src/rendering/box.dart:1956:12)
+#65     RenderFlex._getIntrinsicSize.layoutChild (package:flutter/src/rendering/flex.dart:754:27)
+#66     RenderFlex._computeSizes (package:flutter/src/rendering/flex.dart:1237:28)
+#67     RenderFlex._getIntrinsicSize (package:flutter/src/rendering/flex.dart:760:14)
+#68     RenderFlex.computeMaxIntrinsicWidth (package:flutter/src/rendering/flex.dart:781:12)
+#69     _IntrinsicDimension.memoize.<anonymous closure> (package:flutter/src/rendering/box.dart:1117:51)
+#70     _LinkedHashMapMixin.putIfAbsent (dart:_compact_hash:675:23)
+#71     _IntrinsicDimension.memoize (package:flutter/src/rendering/box.dart:1117:10)
+#72     RenderBox._computeWithTimeline (package:flutter/src/rendering/box.dart:1620:32)
+#73     RenderBox._computeIntrinsics (package:flutter/src/rendering/box.dart:1598:26)
+#74     RenderBox.getMaxIntrinsicWidth (package:flutter/src/rendering/box.dart:1803:12)
+#75     RenderProxyBoxMixin.computeMaxIntrinsicWidth (package:flutter/src/rendering/proxy_box.dart:83:19)
+#76     _IntrinsicDimension.memoize.<anonymous closure> (package:flutter/src/rendering/box.dart:1117:51)
+#77     _LinkedHashMapMixin.putIfAbsent (dart:_compact_hash:675:23)
+#78     _IntrinsicDimension.memoize (package:flutter/src/rendering/box.dart:1117:10)
+#79     RenderBox._computeWithTimeline (package:flutter/src/rendering/box.dart:1620:32)
+#80     RenderBox._computeIntrinsics (package:flutter/src/rendering/box.dart:1598:26)
+#81     RenderBox.getMaxIntrinsicWidth (package:flutter/src/rendering/box.dart:1803:12)
+#82     _RenderSingleChildViewport.computeMaxIntrinsicWidth (package:flutter/src/widgets/single_child_scroll_view.dart:469:19)
+#83     _IntrinsicDimension.memoize.<anonymous closure> (package:flutter/src/rendering/box.dart:1117:51)
+#84     _LinkedHashMapMixin.putIfAbsent (dart:_compact_hash:675:23)
+#85     _IntrinsicDimension.memoize (package:flutter/src/rendering/box.dart:1117:10)
+#86     RenderBox._computeWithTimeline (package:flutter/src/rendering/box.dart:1620:32)
+#87     RenderBox._computeIntrinsics (package:flutter/src/rendering/box.dart:1598:26)
+#88     RenderBox.getMaxIntrinsicWidth (package:flutter/src/rendering/box.dart:1803:12)
+#89     RenderProxyBoxMixin.computeMaxIntrinsicWidth (package:flutter/src/rendering/proxy_box.dart:83:19)
+#90     _IntrinsicDimension.memoize.<anonymous closure> (package:flutter/src/rendering/box.dart:1117:51)
+#91     _LinkedHashMapMixin.putIfAbsent (dart:_compact_hash:675:23)
+#92     _IntrinsicDimension.memoize (package:flutter/src/rendering/box.dart:1117:10)
+#93     RenderBox._computeWithTimeline (package:flutter/src/rendering/box.dart:1620:32)
+#94     RenderBox._computeIntrinsics (package:flutter/src/rendering/box.dart:1598:26)
+#95     RenderBox.getMaxIntrinsicWidth (package:flutter/src/rendering/box.dart:1803:12)
+#96     RenderProxyBoxMixin.computeMaxIntrinsicWidth (package:flutter/src/rendering/proxy_box.dart:83:19)
+#97     _IntrinsicDimension.memoize.<anonymous closure> (package:flutter/src/rendering/box.dart:1117:51)
+#98     _LinkedHashMapMixin.putIfAbsent (dart:_compact_hash:675:23)
+#99     _IntrinsicDimension.memoize (package:flutter/src/rendering/box.dart:1117:10)
+#100    RenderBox._computeWithTimeline (package:flutter/src/rendering/box.dart:1620:32)
+#101    RenderBox._computeIntrinsics (package:flutter/src/rendering/box.dart:1598:26)
+#102    RenderBox.getMaxIntrinsicWidth (package:flutter/src/rendering/box.dart:1803:12)
+#103    RenderProxyBoxMixin.computeMaxIntrinsicWidth (package:flutter/src/rendering/proxy_box.dart:83:19)
+#104    _IntrinsicDimension.memoize.<anonymous closure> (package:flutter/src/rendering/box.dart:1117:51)
+#105    _LinkedHashMapMixin.putIfAbsent (dart:_compact_hash:675:23)
+#106    _IntrinsicDimension.memoize (package:flutter/src/rendering/box.dart:1117:10)
+#107    RenderBox._computeWithTimeline (package:flutter/src/rendering/box.dart:1620:32)
+#108    RenderBox._computeIntrinsics (package:flutter/src/rendering/box.dart:1598:26)
+#109    RenderBox.getMaxIntrinsicWidth (package:flutter/src/rendering/box.dart:1803:12)
+#110    RenderProxyBoxMixin.computeMaxIntrinsicWidth (package:flutter/src/rendering/proxy_box.dart:83:19)
+#111    _IntrinsicDimension.memoize.<anonymous closure> (package:flutter/src/rendering/box.dart:1117:51)
+#112    _LinkedHashMapMixin.putIfAbsent (dart:_compact_hash:675:23)
+#113    _IntrinsicDimension.memoize (package:flutter/src/rendering/box.dart:1117:10)
+#114    RenderBox._computeWithTimeline (package:flutter/src/rendering/box.dart:1620:32)
+#115    RenderBox._computeIntrinsics (package:flutter/src/rendering/box.dart:1598:26)
+#116    RenderBox.getMaxIntrinsicWidth (package:flutter/src/rendering/box.dart:1803:12)
+#117    RenderProxyBoxMixin.computeMaxIntrinsicWidth (package:flutter/src/rendering/proxy_box.dart:83:19)
+#118    _IntrinsicDimension.memoize.<anonymous closure> (package:flutter/src/rendering/box.dart:1117:51)
+#119    _LinkedHashMapMixin.putIfAbsent (dart:_compact_hash:675:23)
+#120    _IntrinsicDimension.memoize (package:flutter/src/rendering/box.dart:1117:10)
+#121    RenderBox._computeWithTimeline (package:flutter/src/rendering/box.dart:1620:32)
+#122    RenderBox._computeIntrinsics (package:flutter/src/rendering/box.dart:1598:26)
+#123    RenderBox.getMaxIntrinsicWidth (package:flutter/src/rendering/box.dart:1803:12)
+#124    RenderProxyBoxMixin.computeMaxIntrinsicWidth (package:flutter/src/rendering/proxy_box.dart:83:19)
+#125    _IntrinsicDimension.memoize.<anonymous closure> (package:flutter/src/rendering/box.dart:1117:51)
+#126    _LinkedHashMapMixin.putIfAbsent (dart:_compact_hash:675:23)
+#127    _IntrinsicDimension.memoize (package:flutter/src/rendering/box.dart:1117:10)
+#128    RenderBox._computeWithTimeline (package:flutter/src/rendering/box.dart:1620:32)
+#129    RenderBox._computeIntrinsics (package:flutter/src/rendering/box.dart:1598:26)
+#130    RenderBox.getMaxIntrinsicWidth (package:flutter/src/rendering/box.dart:1803:12)
+#131    RenderProxyBoxMixin.computeMaxIntrinsicWidth (package:flutter/src/rendering/proxy_box.dart:83:19)
+#132    _IntrinsicDimension.memoize.<anonymous closure> (package:flutter/src/rendering/box.dart:1117:51)
+#133    _LinkedHashMapMixin.putIfAbsent (dart:_compact_hash:675:23)
+#134    _IntrinsicDimension.memoize (package:flutter/src/rendering/box.dart:1117:10)
+#135    RenderBox._computeWithTimeline (package:flutter/src/rendering/box.dart:1620:32)
+#136    RenderBox._computeIntrinsics (package:flutter/src/rendering/box.dart:1598:26)
+#137    RenderBox.getMaxIntrinsicWidth (package:flutter/src/rendering/box.dart:1803:12)
+#138    RenderProxyBoxMixin.computeMaxIntrinsicWidth (package:flutter/src/rendering/proxy_box.dart:83:19)
+#139    _IntrinsicDimension.memoize.<anonymous closure> (package:flutter/src/rendering/box.dart:1117:51)
+#140    _LinkedHashMapMixin.putIfAbsent (dart:_compact_hash:675:23)
+#141    _IntrinsicDimension.memoize (package:flutter/src/rendering/box.dart:1117:10)
+#142    RenderBox._computeWithTimeline (package:flutter/src/rendering/box.dart:1620:32)
+#143    RenderBox._computeIntrinsics (package:flutter/src/rendering/box.dart:1598:26)
+#144    RenderBox.getMaxIntrinsicWidth (package:flutter/src/rendering/box.dart:1803:12)
+#145    RenderProxyBoxMixin.computeMaxIntrinsicWidth (package:flutter/src/rendering/proxy_box.dart:83:19)
+#146    RenderConstrainedBox.computeMaxIntrinsicWidth (package:flutter/src/rendering/proxy_box.dart:253:32)
+#147    _IntrinsicDimension.memoize.<anonymous closure> (package:flutter/src/rendering/box.dart:1117:51)
+#148    _LinkedHashMapMixin.putIfAbsent (dart:_compact_hash:675:23)
+#149    _IntrinsicDimension.memoize (package:flutter/src/rendering/box.dart:1117:10)
+#150    RenderBox._computeWithTimeline (package:flutter/src/rendering/box.dart:1620:32)
+#151    RenderBox._computeIntrinsics (package:flutter/src/rendering/box.dart:1598:26)
+#152    RenderBox.getMaxIntrinsicWidth (package:flutter/src/rendering/box.dart:1803:12)
+#153    RenderProxyBoxMixin.computeMaxIntrinsicWidth (package:flutter/src/rendering/proxy_box.dart:83:19)
+#154    _IntrinsicDimension.memoize.<anonymous closure> (package:flutter/src/rendering/box.dart:1117:51)
+#155    _LinkedHashMapMixin.putIfAbsent (dart:_compact_hash:675:23)
+#156    _IntrinsicDimension.memoize (package:flutter/src/rendering/box.dart:1117:10)
+#157    RenderBox._computeWithTimeline (package:flutter/src/rendering/box.dart:1620:32)
+#158    RenderBox._computeIntrinsics (package:flutter/src/rendering/box.dart:1598:26)
+#159    RenderBox.getMaxIntrinsicWidth (package:flutter/src/rendering/box.dart:1803:12)
+#160    RenderPadding.computeMaxIntrinsicWidth (package:flutter/src/rendering/shifted_box.dart:196:21)
+#161    _IntrinsicDimension.memoize.<anonymous closure> (package:flutter/src/rendering/box.dart:1117:51)
+#162    _LinkedHashMapMixin.putIfAbsent (dart:_compact_hash:675:23)
+#163    _IntrinsicDimension.memoize (package:flutter/src/rendering/box.dart:1117:10)
+#164    RenderBox._computeWithTimeline (package:flutter/src/rendering/box.dart:1620:32)
+#165    RenderBox._computeIntrinsics (package:flutter/src/rendering/box.dart:1598:26)
+#166    RenderBox.getMaxIntrinsicWidth (package:flutter/src/rendering/box.dart:1803:12)
+#167    RenderFlex.computeMaxIntrinsicWidth.<anonymous closure> (package:flutter/src/rendering/flex.dart:784:60)
+#168    RenderFlex._getIntrinsicSize.layoutChild (package:flutter/src/rendering/flex.dart:757:29)
+#169    RenderFlex._computeSizes (package:flutter/src/rendering/flex.dart:1275:26)
+#170    RenderFlex._getIntrinsicSize (package:flutter/src/rendering/flex.dart:760:14)
+#171    RenderFlex.computeMaxIntrinsicWidth (package:flutter/src/rendering/flex.dart:781:12)
+#172    _IntrinsicDimension.memoize.<anonymous closure> (package:flutter/src/rendering/box.dart:1117:51)
+#173    _LinkedHashMapMixin.putIfAbsent (dart:_compact_hash:675:23)
+#174    _IntrinsicDimension.memoize (package:flutter/src/rendering/box.dart:1117:10)
+#175    RenderBox._computeWithTimeline (package:flutter/src/rendering/box.dart:1620:32)
+#176    RenderBox._computeIntrinsics (package:flutter/src/rendering/box.dart:1598:26)
+#177    RenderBox.getMaxIntrinsicWidth (package:flutter/src/rendering/box.dart:1803:12)
+#178    RenderIntrinsicWidth._childConstraints (package:flutter/src/rendering/proxy_box.dart:716:30)
+#179    RenderIntrinsicWidth._computeSize (package:flutter/src/rendering/proxy_box.dart:727:30)
+#180    RenderIntrinsicWidth.performLayout (package:flutter/src/rendering/proxy_box.dart:744:12)
+#181    RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#182    RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:18)
+#183    RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#184    RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:18)
+#185    RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#186    RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:18)
+#187    RenderCustomPaint.performLayout (package:flutter/src/rendering/custom_paint.dart:574:11)
+#188    RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#189    RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:18)
+#190    _RenderCustomClip.performLayout (package:flutter/src/rendering/proxy_box.dart:1549:11)
+#191    RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#192    RenderConstrainedBox.performLayout (package:flutter/src/rendering/proxy_box.dart:296:14)
+#193    RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#194    RenderPositionedBox.performLayout (package:flutter/src/rendering/shifted_box.dart:484:14)
+#195    RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#196    RenderPadding.performLayout (package:flutter/src/rendering/shifted_box.dart:262:12)
+#197    RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#198    RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:18)
+#199    RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#200    RenderPadding.performLayout (package:flutter/src/rendering/shifted_box.dart:262:12)
+#201    RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#202    RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:18)
+#203    RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#204    RenderPadding.performLayout (package:flutter/src/rendering/shifted_box.dart:262:12)
+#205    RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#206    RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:18)
+#207    RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#208    RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:18)
+#209    RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#210    RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:18)
+#211    RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#212    RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:18)
+#213    RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#214    RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:18)
+#215    RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#216    RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:18)
+#217    RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#218    RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:18)
+#219    RenderOffstage.performLayout (package:flutter/src/rendering/proxy_box.dart:3923:13)
+#220    RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#221    RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:18)
+#222    RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#223    _RenderTheaterMixin.layoutChild (package:flutter/src/widgets/overlay.dart:1084:13)
+#224    _RenderTheater.performLayout (package:flutter/src/widgets/overlay.dart:1429:9)
+#225    RenderObject._layoutWithoutResize (package:flutter/src/rendering/object.dart:2616:7)
+#226    PipelineOwner.flushLayout (package:flutter/src/rendering/object.dart:1174:18)
+#227    PipelineOwner.flushLayout (package:flutter/src/rendering/object.dart:1187:15)
+#228    AutomatedTestWidgetsFlutterBinding.drawFrame (package:flutter_test/src/binding.dart:2133:27)
+#229    RendererBinding._handlePersistentFrameCallback (package:flutter/src/rendering/binding.dart:495:5)
+#230    SchedulerBinding._invokeFrameCallback (package:flutter/src/scheduler/binding.dart:1430:15)
+#231    SchedulerBinding.handleDrawFrame (package:flutter/src/scheduler/binding.dart:1345:9)
+#232    AutomatedTestWidgetsFlutterBinding.pump.<anonymous closure> (package:flutter_test/src/binding.dart:1960:9)
+#235    TestAsyncUtils.guard (package:flutter_test/src/test_async_utils.dart:74:41)
+#236    AutomatedTestWidgetsFlutterBinding.pump (package:flutter_test/src/binding.dart:1949:27)
+#237    WidgetTester.pump.<anonymous closure> (package:flutter_test/src/widget_tester.dart:652:53)
+#240    TestAsyncUtils.guard (package:flutter_test/src/test_async_utils.dart:74:41)
+#241    WidgetTester.pump (package:flutter_test/src/widget_tester.dart:652:27)
+#242    main.<anonymous closure> (file:///d:/MD%20Group/madarsa_app/test/test_dialog.dart:41:18)
+<asynchronous suspension>
+#243    testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#244    TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1682:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided 5 frames from dart:async and package:stack_trace)
+
+The following RenderObject was being processed when the exception was fired: RenderIntrinsicWidth#50b7a relayoutBoundary=up6 NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE:
+  creator: IntrinsicWidth ← Semantics ← DefaultTextStyle ← AnimatedDefaultTextStyle ←
+    _InkFeatures-[GlobalKey#95c1b ink renderer] ← NotificationListener<LayoutChangedNotification> ←
+    CustomPaint ← _ShapeBorderPaint ← PhysicalShape ← _MaterialInterior ← Material ← ConstrainedBox ←
+    ⋯
+  parentData: <none> (can use size)
+  constraints: BoxConstraints(280.0<=w<=720.0, 0.0<=h<=552.0)
+  size: MISSING
+  stepWidth: null
+  stepHeight: null
+This RenderObject had the following descendants (showing up to depth 5):
+    child: RenderFlex#a4366 NEEDS-LAYOUT NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE
+      child 1: RenderPadding#75391 NEEDS-LAYOUT NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE
+        child: RenderSemanticsAnnotations#964ee NEEDS-LAYOUT NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE
+          child: RenderParagraph#b8287 NEEDS-LAYOUT NEEDS-PAINT
+            text: TextSpan
+      child 2: RenderPadding#b3504 NEEDS-LAYOUT NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE
+        child: RenderSemanticsAnnotations#9da9a NEEDS-LAYOUT NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE
+          child: RenderConstrainedBox#40c23 NEEDS-LAYOUT NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE
+            child: RenderClipRect#52127 NEEDS-LAYOUT NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE
+      child 3: RenderPadding#9c33a NEEDS-LAYOUT NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE
+        child: _RenderOverflowBar#d6ab1 NEEDS-LAYOUT NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE
+          child 1: RenderSemanticsAnnotations#8e100 NEEDS-LAYOUT NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE
+            child: _RenderInputPadding#489dd NEEDS-LAYOUT NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE
+          child 2: RenderSemanticsAnnotations#a349d NEEDS-LAYOUT NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE
+            child: _RenderInputPadding#325aa NEEDS-LAYOUT NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE
+════════════════════════════════════════════════════════════════════════════════════════════════════
+══╡ EXCEPTION CAUGHT BY RENDERING LIBRARY ╞═════════════════════════════════════════════════════════
+The following assertion was thrown during performLayout():
+RenderBox was not laid out: RenderIntrinsicWidth#50b7a relayoutBoundary=up6 NEEDS-PAINT
+NEEDS-COMPOSITING-BITS-UPDATE
+'package:flutter/src/rendering/box.dart':
+Failed assertion: line 2251 pos 12: 'hasSize'
+
+Either the assertion indicates an error in the framework itself, or we should provide substantially
+more information in this error message to help you determine and fix the underlying cause.
+In either case, please report this assertion by filing a bug on GitHub:
+  https://github.com/flutter/flutter/issues/new?template=02_bug.yml
+
+The relevant error-causing widget was:
+  AlertDialog
+  AlertDialog:file:///d:/MD%20Group/madarsa_app/lib/features/kitchen/presentation/screens/kitchen_screen.dart:2675:12
+
+When the exception was thrown, this was the stack:
+#2      RenderBox.size (package:flutter/src/rendering/box.dart:2251:12)
+#3      RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:62)
+#4      RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#5      RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:18)
+#6      RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#7      RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:18)
+#8      RenderCustomPaint.performLayout (package:flutter/src/rendering/custom_paint.dart:574:11)
+#9      RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#10     RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:18)
+#11     _RenderCustomClip.performLayout (package:flutter/src/rendering/proxy_box.dart:1549:11)
+#12     RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#13     RenderConstrainedBox.performLayout (package:flutter/src/rendering/proxy_box.dart:296:14)
+#14     RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#15     RenderPositionedBox.performLayout (package:flutter/src/rendering/shifted_box.dart:484:14)
+#16     RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#17     RenderPadding.performLayout (package:flutter/src/rendering/shifted_box.dart:262:12)
+#18     RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#19     RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:18)
+#20     RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#21     RenderPadding.performLayout (package:flutter/src/rendering/shifted_box.dart:262:12)
+#22     RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#23     RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:18)
+#24     RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#25     RenderPadding.performLayout (package:flutter/src/rendering/shifted_box.dart:262:12)
+#26     RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#27     RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:18)
+#28     RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#29     RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:18)
+#30     RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#31     RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:18)
+#32     RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#33     RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:18)
+#34     RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#35     RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:18)
+#36     RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#37     RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:18)
+#38     RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#39     RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:18)
+#40     RenderOffstage.performLayout (package:flutter/src/rendering/proxy_box.dart:3923:13)
+#41     RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#42     RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:18)
+#43     RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#44     _RenderTheaterMixin.layoutChild (package:flutter/src/widgets/overlay.dart:1084:13)
+#45     _RenderTheater.performLayout (package:flutter/src/widgets/overlay.dart:1429:9)
+#46     RenderObject._layoutWithoutResize (package:flutter/src/rendering/object.dart:2616:7)
+#47     PipelineOwner.flushLayout (package:flutter/src/rendering/object.dart:1174:18)
+#48     PipelineOwner.flushLayout (package:flutter/src/rendering/object.dart:1187:15)
+#49     AutomatedTestWidgetsFlutterBinding.drawFrame (package:flutter_test/src/binding.dart:2133:27)
+#50     RendererBinding._handlePersistentFrameCallback (package:flutter/src/rendering/binding.dart:495:5)
+#51     SchedulerBinding._invokeFrameCallback (package:flutter/src/scheduler/binding.dart:1430:15)
+#52     SchedulerBinding.handleDrawFrame (package:flutter/src/scheduler/binding.dart:1345:9)
+#53     AutomatedTestWidgetsFlutterBinding.pump.<anonymous closure> (package:flutter_test/src/binding.dart:1960:9)
+#56     TestAsyncUtils.guard (package:flutter_test/src/test_async_utils.dart:74:41)
+#57     AutomatedTestWidgetsFlutterBinding.pump (package:flutter_test/src/binding.dart:1949:27)
+#58     WidgetTester.pump.<anonymous closure> (package:flutter_test/src/widget_tester.dart:652:53)
+#61     TestAsyncUtils.guard (package:flutter_test/src/test_async_utils.dart:74:41)
+#62     WidgetTester.pump (package:flutter_test/src/widget_tester.dart:652:27)
+#63     main.<anonymous closure> (file:///d:/MD%20Group/madarsa_app/test/test_dialog.dart:41:18)
+<asynchronous suspension>
+#64     testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#65     TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1682:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided 7 frames from class _AssertionError, dart:async, and package:stack_trace)
+
+The following RenderObject was being processed when the exception was fired: RenderSemanticsAnnotations#427e7 relayoutBoundary=up5 NEEDS-LAYOUT NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE:
+  creator: Semantics ← DefaultTextStyle ← AnimatedDefaultTextStyle ← _InkFeatures-[GlobalKey#95c1b ink
+    renderer] ← NotificationListener<LayoutChangedNotification> ← CustomPaint ← _ShapeBorderPaint ←
+    PhysicalShape ← _MaterialInterior ← Material ← ConstrainedBox ← Align ← ⋯
+  parentData: <none> (can use size)
+  constraints: BoxConstraints(280.0<=w<=720.0, 0.0<=h<=552.0)
+  size: MISSING
+This RenderObject had the following descendants (showing up to depth 5):
+    child: RenderIntrinsicWidth#50b7a relayoutBoundary=up6 NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE
+      child: RenderFlex#a4366 NEEDS-LAYOUT NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE
+        child 1: RenderPadding#75391 NEEDS-LAYOUT NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE
+          child: RenderSemanticsAnnotations#964ee NEEDS-LAYOUT NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE
+            child: RenderParagraph#b8287 NEEDS-LAYOUT NEEDS-PAINT
+        child 2: RenderPadding#b3504 NEEDS-LAYOUT NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE
+          child: RenderSemanticsAnnotations#9da9a NEEDS-LAYOUT NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE
+            child: RenderConstrainedBox#40c23 NEEDS-LAYOUT NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE
+        child 3: RenderPadding#9c33a NEEDS-LAYOUT NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE
+          child: _RenderOverflowBar#d6ab1 NEEDS-LAYOUT NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE
+            child 1: RenderSemanticsAnnotations#8e100 NEEDS-LAYOUT NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE
+            child 2: RenderSemanticsAnnotations#a349d NEEDS-LAYOUT NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE
+════════════════════════════════════════════════════════════════════════════════════════════════════
+══╡ EXCEPTION CAUGHT BY RENDERING LIBRARY ╞═════════════════════════════════════════════════════════
+The following assertion was thrown during performLayout():
+RenderBox was not laid out: RenderSemanticsAnnotations#427e7 relayoutBoundary=up5 NEEDS-PAINT
+NEEDS-COMPOSITING-BITS-UPDATE
+'package:flutter/src/rendering/box.dart':
+Failed assertion: line 2251 pos 12: 'hasSize'
+
+Either the assertion indicates an error in the framework itself, or we should provide substantially
+more information in this error message to help you determine and fix the underlying cause.
+In either case, please report this assertion by filing a bug on GitHub:
+  https://github.com/flutter/flutter/issues/new?template=02_bug.yml
+
+The relevant error-causing widget was:
+  AlertDialog
+  AlertDialog:file:///d:/MD%20Group/madarsa_app/lib/features/kitchen/presentation/screens/kitchen_screen.dart:2675:12
+
+When the exception was thrown, this was the stack:
+#2      RenderBox.size (package:flutter/src/rendering/box.dart:2251:12)
+#3      RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:62)
+#4      RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#5      RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:18)
+#6      RenderCustomPaint.performLayout (package:flutter/src/rendering/custom_paint.dart:574:11)
+#7      RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#8      RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:18)
+#9      _RenderCustomClip.performLayout (package:flutter/src/rendering/proxy_box.dart:1549:11)
+#10     RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#11     RenderConstrainedBox.performLayout (package:flutter/src/rendering/proxy_box.dart:296:14)
+#12     RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#13     RenderPositionedBox.performLayout (package:flutter/src/rendering/shifted_box.dart:484:14)
+#14     RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#15     RenderPadding.performLayout (package:flutter/src/rendering/shifted_box.dart:262:12)
+#16     RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#17     RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:18)
+#18     RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#19     RenderPadding.performLayout (package:flutter/src/rendering/shifted_box.dart:262:12)
+#20     RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#21     RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:18)
+#22     RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#23     RenderPadding.performLayout (package:flutter/src/rendering/shifted_box.dart:262:12)
+#24     RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#25     RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:18)
+#26     RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#27     RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:18)
+#28     RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#29     RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:18)
+#30     RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#31     RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:18)
+#32     RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#33     RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:18)
+#34     RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#35     RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:18)
+#36     RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#37     RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:18)
+#38     RenderOffstage.performLayout (package:flutter/src/rendering/proxy_box.dart:3923:13)
+#39     RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#40     RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:18)
+#41     RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#42     _RenderTheaterMixin.layoutChild (package:flutter/src/widgets/overlay.dart:1084:13)
+#43     _RenderTheater.performLayout (package:flutter/src/widgets/overlay.dart:1429:9)
+#44     RenderObject._layoutWithoutResize (package:flutter/src/rendering/object.dart:2616:7)
+#45     PipelineOwner.flushLayout (package:flutter/src/rendering/object.dart:1174:18)
+#46     PipelineOwner.flushLayout (package:flutter/src/rendering/object.dart:1187:15)
+#47     AutomatedTestWidgetsFlutterBinding.drawFrame (package:flutter_test/src/binding.dart:2133:27)
+#48     RendererBinding._handlePersistentFrameCallback (package:flutter/src/rendering/binding.dart:495:5)
+#49     SchedulerBinding._invokeFrameCallback (package:flutter/src/scheduler/binding.dart:1430:15)
+#50     SchedulerBinding.handleDrawFrame (package:flutter/src/scheduler/binding.dart:1345:9)
+#51     AutomatedTestWidgetsFlutterBinding.pump.<anonymous closure> (package:flutter_test/src/binding.dart:1960:9)
+#54     TestAsyncUtils.guard (package:flutter_test/src/test_async_utils.dart:74:41)
+#55     AutomatedTestWidgetsFlutterBinding.pump (package:flutter_test/src/binding.dart:1949:27)
+#56     WidgetTester.pump.<anonymous closure> (package:flutter_test/src/widget_tester.dart:652:53)
+#59     TestAsyncUtils.guard (package:flutter_test/src/test_async_utils.dart:74:41)
+#60     WidgetTester.pump (package:flutter_test/src/widget_tester.dart:652:27)
+#61     main.<anonymous closure> (file:///d:/MD%20Group/madarsa_app/test/test_dialog.dart:41:18)
+<asynchronous suspension>
+#62     testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#63     TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1682:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided 7 frames from class _AssertionError, dart:async, and package:stack_trace)
+
+The following RenderObject was being processed when the exception was fired: _RenderInkFeatures#9e0bb relayoutBoundary=up4 NEEDS-LAYOUT NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE:
+  creator: _InkFeatures-[GlobalKey#95c1b ink renderer] ←
+    NotificationListener<LayoutChangedNotification> ← CustomPaint ← _ShapeBorderPaint ← PhysicalShape
+    ← _MaterialInterior ← Material ← ConstrainedBox ← Align ← MediaQuery ← Padding ← AnimatedPadding ←
+    ⋯
+  parentData: <none> (can use size)
+  constraints: BoxConstraints(280.0<=w<=720.0, 0.0<=h<=552.0)
+  size: MISSING
+This RenderObject had the following descendants (showing up to depth 5):
+    child: RenderSemanticsAnnotations#427e7 relayoutBoundary=up5 NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE
+      child: RenderIntrinsicWidth#50b7a relayoutBoundary=up6 NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE
+        child: RenderFlex#a4366 NEEDS-LAYOUT NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE
+          child 1: RenderPadding#75391 NEEDS-LAYOUT NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE
+            child: RenderSemanticsAnnotations#964ee NEEDS-LAYOUT NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE
+          child 2: RenderPadding#b3504 NEEDS-LAYOUT NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE
+            child: RenderSemanticsAnnotations#9da9a NEEDS-LAYOUT NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE
+          child 3: RenderPadding#9c33a NEEDS-LAYOUT NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE
+            child: _RenderOverflowBar#d6ab1 NEEDS-LAYOUT NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE
+════════════════════════════════════════════════════════════════════════════════════════════════════
+══╡ EXCEPTION CAUGHT BY RENDERING LIBRARY ╞═════════════════════════════════════════════════════════
+The following assertion was thrown during performLayout():
+RenderBox was not laid out: _RenderInkFeatures#9e0bb relayoutBoundary=up4 NEEDS-PAINT
+NEEDS-COMPOSITING-BITS-UPDATE
+'package:flutter/src/rendering/box.dart':
+Failed assertion: line 2251 pos 12: 'hasSize'
+
+Either the assertion indicates an error in the framework itself, or we should provide substantially
+more information in this error message to help you determine and fix the underlying cause.
+In either case, please report this assertion by filing a bug on GitHub:
+  https://github.com/flutter/flutter/issues/new?template=02_bug.yml
+
+The relevant error-causing widget was:
+  AlertDialog
+  AlertDialog:file:///d:/MD%20Group/madarsa_app/lib/features/kitchen/presentation/screens/kitchen_screen.dart:2675:12
+
+When the exception was thrown, this was the stack:
+#2      RenderBox.size (package:flutter/src/rendering/box.dart:2251:12)
+#3      RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:62)
+#4      RenderCustomPaint.performLayout (package:flutter/src/rendering/custom_paint.dart:574:11)
+#5      RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#6      RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:18)
+#7      _RenderCustomClip.performLayout (package:flutter/src/rendering/proxy_box.dart:1549:11)
+#8      RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#9      RenderConstrainedBox.performLayout (package:flutter/src/rendering/proxy_box.dart:296:14)
+#10     RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#11     RenderPositionedBox.performLayout (package:flutter/src/rendering/shifted_box.dart:484:14)
+#12     RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#13     RenderPadding.performLayout (package:flutter/src/rendering/shifted_box.dart:262:12)
+#14     RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#15     RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:18)
+#16     RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#17     RenderPadding.performLayout (package:flutter/src/rendering/shifted_box.dart:262:12)
+#18     RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#19     RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:18)
+#20     RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#21     RenderPadding.performLayout (package:flutter/src/rendering/shifted_box.dart:262:12)
+#22     RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#23     RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:18)
+#24     RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#25     RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:18)
+#26     RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#27     RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:18)
+#28     RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#29     RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:18)
+#30     RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#31     RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:18)
+#32     RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#33     RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:18)
+#34     RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#35     RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:18)
+#36     RenderOffstage.performLayout (package:flutter/src/rendering/proxy_box.dart:3923:13)
+#37     RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#38     RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:18)
+#39     RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#40     _RenderTheaterMixin.layoutChild (package:flutter/src/widgets/overlay.dart:1084:13)
+#41     _RenderTheater.performLayout (package:flutter/src/widgets/overlay.dart:1429:9)
+#42     RenderObject._layoutWithoutResize (package:flutter/src/rendering/object.dart:2616:7)
+#43     PipelineOwner.flushLayout (package:flutter/src/rendering/object.dart:1174:18)
+#44     PipelineOwner.flushLayout (package:flutter/src/rendering/object.dart:1187:15)
+#45     AutomatedTestWidgetsFlutterBinding.drawFrame (package:flutter_test/src/binding.dart:2133:27)
+#46     RendererBinding._handlePersistentFrameCallback (package:flutter/src/rendering/binding.dart:495:5)
+#47     SchedulerBinding._invokeFrameCallback (package:flutter/src/scheduler/binding.dart:1430:15)
+#48     SchedulerBinding.handleDrawFrame (package:flutter/src/scheduler/binding.dart:1345:9)
+#49     AutomatedTestWidgetsFlutterBinding.pump.<anonymous closure> (package:flutter_test/src/binding.dart:1960:9)
+#52     TestAsyncUtils.guard (package:flutter_test/src/test_async_utils.dart:74:41)
+#53     AutomatedTestWidgetsFlutterBinding.pump (package:flutter_test/src/binding.dart:1949:27)
+#54     WidgetTester.pump.<anonymous closure> (package:flutter_test/src/widget_tester.dart:652:53)
+#57     TestAsyncUtils.guard (package:flutter_test/src/test_async_utils.dart:74:41)
+#58     WidgetTester.pump (package:flutter_test/src/widget_tester.dart:652:27)
+#59     main.<anonymous closure> (file:///d:/MD%20Group/madarsa_app/test/test_dialog.dart:41:18)
+<asynchronous suspension>
+#60     testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#61     TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1682:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided 7 frames from class _AssertionError, dart:async, and package:stack_trace)
+
+The following RenderObject was being processed when the exception was fired: RenderCustomPaint#68290 relayoutBoundary=up3 NEEDS-LAYOUT NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE:
+  creator: CustomPaint ← _ShapeBorderPaint ← PhysicalShape ← _MaterialInterior ← Material ←
+    ConstrainedBox ← Align ← MediaQuery ← Padding ← AnimatedPadding ← Semantics ← Dialog ← ⋯
+  parentData: <none> (can use size)
+  constraints: BoxConstraints(280.0<=w<=720.0, 0.0<=h<=552.0)
+  size: MISSING
+  painter: null
+  foregroundPainter: _ShapeBorderPainter#ff56e()
+This RenderObject had the following descendants (showing up to depth 5):
+    child: _RenderInkFeatures#9e0bb relayoutBoundary=up4 NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE
+      child: RenderSemanticsAnnotations#427e7 relayoutBoundary=up5 NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE
+        child: RenderIntrinsicWidth#50b7a relayoutBoundary=up6 NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE
+          child: RenderFlex#a4366 NEEDS-LAYOUT NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE
+            child 1: RenderPadding#75391 NEEDS-LAYOUT NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE
+            child 2: RenderPadding#b3504 NEEDS-LAYOUT NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE
+            child 3: RenderPadding#9c33a NEEDS-LAYOUT NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE
+════════════════════════════════════════════════════════════════════════════════════════════════════
+══╡ EXCEPTION CAUGHT BY RENDERING LIBRARY ╞═════════════════════════════════════════════════════════
+The following assertion was thrown during performLayout():
+RenderBox was not laid out: RenderCustomPaint#68290 relayoutBoundary=up3 NEEDS-PAINT
+NEEDS-COMPOSITING-BITS-UPDATE
+'package:flutter/src/rendering/box.dart':
+Failed assertion: line 2251 pos 12: 'hasSize'
+
+Either the assertion indicates an error in the framework itself, or we should provide substantially
+more information in this error message to help you determine and fix the underlying cause.
+In either case, please report this assertion by filing a bug on GitHub:
+  https://github.com/flutter/flutter/issues/new?template=02_bug.yml
+
+The relevant error-causing widget was:
+  AlertDialog
+  AlertDialog:file:///d:/MD%20Group/madarsa_app/lib/features/kitchen/presentation/screens/kitchen_screen.dart:2675:12
+
+When the exception was thrown, this was the stack:
+#2      RenderBox.size (package:flutter/src/rendering/box.dart:2251:12)
+#3      RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:62)
+#4      _RenderCustomClip.performLayout (package:flutter/src/rendering/proxy_box.dart:1549:11)
+#5      RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#6      RenderConstrainedBox.performLayout (package:flutter/src/rendering/proxy_box.dart:296:14)
+#7      RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#8      RenderPositionedBox.performLayout (package:flutter/src/rendering/shifted_box.dart:484:14)
+#9      RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#10     RenderPadding.performLayout (package:flutter/src/rendering/shifted_box.dart:262:12)
+#11     RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#12     RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:18)
+#13     RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#14     RenderPadding.performLayout (package:flutter/src/rendering/shifted_box.dart:262:12)
+#15     RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#16     RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:18)
+#17     RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#18     RenderPadding.performLayout (package:flutter/src/rendering/shifted_box.dart:262:12)
+#19     RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#20     RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:18)
+#21     RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#22     RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:18)
+#23     RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#24     RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:18)
+#25     RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#26     RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:18)
+#27     RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#28     RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:18)
+#29     RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#30     RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:18)
+#31     RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#32     RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:18)
+#33     RenderOffstage.performLayout (package:flutter/src/rendering/proxy_box.dart:3923:13)
+#34     RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#35     RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:18)
+#36     RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#37     _RenderTheaterMixin.layoutChild (package:flutter/src/widgets/overlay.dart:1084:13)
+#38     _RenderTheater.performLayout (package:flutter/src/widgets/overlay.dart:1429:9)
+#39     RenderObject._layoutWithoutResize (package:flutter/src/rendering/object.dart:2616:7)
+#40     PipelineOwner.flushLayout (package:flutter/src/rendering/object.dart:1174:18)
+#41     PipelineOwner.flushLayout (package:flutter/src/rendering/object.dart:1187:15)
+#42     AutomatedTestWidgetsFlutterBinding.drawFrame (package:flutter_test/src/binding.dart:2133:27)
+#43     RendererBinding._handlePersistentFrameCallback (package:flutter/src/rendering/binding.dart:495:5)
+#44     SchedulerBinding._invokeFrameCallback (package:flutter/src/scheduler/binding.dart:1430:15)
+#45     SchedulerBinding.handleDrawFrame (package:flutter/src/scheduler/binding.dart:1345:9)
+#46     AutomatedTestWidgetsFlutterBinding.pump.<anonymous closure> (package:flutter_test/src/binding.dart:1960:9)
+#49     TestAsyncUtils.guard (package:flutter_test/src/test_async_utils.dart:74:41)
+#50     AutomatedTestWidgetsFlutterBinding.pump (package:flutter_test/src/binding.dart:1949:27)
+#51     WidgetTester.pump.<anonymous closure> (package:flutter_test/src/widget_tester.dart:652:53)
+#54     TestAsyncUtils.guard (package:flutter_test/src/test_async_utils.dart:74:41)
+#55     WidgetTester.pump (package:flutter_test/src/widget_tester.dart:652:27)
+#56     main.<anonymous closure> (file:///d:/MD%20Group/madarsa_app/test/test_dialog.dart:41:18)
+<asynchronous suspension>
+#57     testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#58     TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1682:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided 7 frames from class _AssertionError, dart:async, and package:stack_trace)
+
+The following RenderObject was being processed when the exception was fired: RenderPhysicalShape#4233e relayoutBoundary=up2 NEEDS-LAYOUT NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE:
+  creator: PhysicalShape ← _MaterialInterior ← Material ← ConstrainedBox ← Align ← MediaQuery ←
+    Padding ← AnimatedPadding ← Semantics ← Dialog ← AlertDialog ← AddEditMenuDialog ← ⋯
+  parentData: <none> (can use size)
+  constraints: BoxConstraints(280.0<=w<=720.0, 0.0<=h<=552.0)
+  size: MISSING
+  elevation: 6.0
+  color: Color(alpha: 1.0000, red: 0.9255, green: 0.9020, blue: 0.9412, colorSpace: ColorSpace.sRGB)
+  shadowColor: Color(alpha: 1.0000, red: 0.9255, green: 0.9020, blue: 0.9412, colorSpace:
+    ColorSpace.sRGB)
+  clipper: ShapeBorderClipper
+This RenderObject had the following descendants (showing up to depth 5):
+    child: RenderCustomPaint#68290 relayoutBoundary=up3 NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE
+      child: _RenderInkFeatures#9e0bb relayoutBoundary=up4 NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE
+        child: RenderSemanticsAnnotations#427e7 relayoutBoundary=up5 NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE
+          child: RenderIntrinsicWidth#50b7a relayoutBoundary=up6 NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE
+            child: RenderFlex#a4366 NEEDS-LAYOUT NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE
+════════════════════════════════════════════════════════════════════════════════════════════════════
+══╡ EXCEPTION CAUGHT BY RENDERING LIBRARY ╞═════════════════════════════════════════════════════════
+The following assertion was thrown during performLayout():
+RenderBox was not laid out: RenderPhysicalShape#4233e relayoutBoundary=up2 NEEDS-PAINT
+NEEDS-COMPOSITING-BITS-UPDATE
+'package:flutter/src/rendering/box.dart':
+Failed assertion: line 2251 pos 12: 'hasSize'
+
+Either the assertion indicates an error in the framework itself, or we should provide substantially
+more information in this error message to help you determine and fix the underlying cause.
+In either case, please report this assertion by filing a bug on GitHub:
+  https://github.com/flutter/flutter/issues/new?template=02_bug.yml
+
+The relevant error-causing widget was:
+  AlertDialog
+  AlertDialog:file:///d:/MD%20Group/madarsa_app/lib/features/kitchen/presentation/screens/kitchen_screen.dart:2675:12
+
+When the exception was thrown, this was the stack:
+#2      RenderBox.size (package:flutter/src/rendering/box.dart:2251:12)
+#3      RenderConstrainedBox.performLayout (package:flutter/src/rendering/proxy_box.dart:297:21)
+#4      RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#5      RenderPositionedBox.performLayout (package:flutter/src/rendering/shifted_box.dart:484:14)
+#6      RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#7      RenderPadding.performLayout (package:flutter/src/rendering/shifted_box.dart:262:12)
+#8      RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#9      RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:18)
+#10     RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#11     RenderPadding.performLayout (package:flutter/src/rendering/shifted_box.dart:262:12)
+#12     RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#13     RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:18)
+#14     RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#15     RenderPadding.performLayout (package:flutter/src/rendering/shifted_box.dart:262:12)
+#16     RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#17     RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:18)
+#18     RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#19     RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:18)
+#20     RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#21     RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:18)
+#22     RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#23     RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:18)
+#24     RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#25     RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:18)
+#26     RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#27     RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:18)
+#28     RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#29     RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:18)
+#30     RenderOffstage.performLayout (package:flutter/src/rendering/proxy_box.dart:3923:13)
+#31     RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#32     RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:18)
+#33     RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#34     _RenderTheaterMixin.layoutChild (package:flutter/src/widgets/overlay.dart:1084:13)
+#35     _RenderTheater.performLayout (package:flutter/src/widgets/overlay.dart:1429:9)
+#36     RenderObject._layoutWithoutResize (package:flutter/src/rendering/object.dart:2616:7)
+#37     PipelineOwner.flushLayout (package:flutter/src/rendering/object.dart:1174:18)
+#38     PipelineOwner.flushLayout (package:flutter/src/rendering/object.dart:1187:15)
+#39     AutomatedTestWidgetsFlutterBinding.drawFrame (package:flutter_test/src/binding.dart:2133:27)
+#40     RendererBinding._handlePersistentFrameCallback (package:flutter/src/rendering/binding.dart:495:5)
+#41     SchedulerBinding._invokeFrameCallback (package:flutter/src/scheduler/binding.dart:1430:15)
+#42     SchedulerBinding.handleDrawFrame (package:flutter/src/scheduler/binding.dart:1345:9)
+#43     AutomatedTestWidgetsFlutterBinding.pump.<anonymous closure> (package:flutter_test/src/binding.dart:1960:9)
+#46     TestAsyncUtils.guard (package:flutter_test/src/test_async_utils.dart:74:41)
+#47     AutomatedTestWidgetsFlutterBinding.pump (package:flutter_test/src/binding.dart:1949:27)
+#48     WidgetTester.pump.<anonymous closure> (package:flutter_test/src/widget_tester.dart:652:53)
+#51     TestAsyncUtils.guard (package:flutter_test/src/test_async_utils.dart:74:41)
+#52     WidgetTester.pump (package:flutter_test/src/widget_tester.dart:652:27)
+#53     main.<anonymous closure> (file:///d:/MD%20Group/madarsa_app/test/test_dialog.dart:41:18)
+<asynchronous suspension>
+#54     testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#55     TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1682:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided 7 frames from class _AssertionError, dart:async, and package:stack_trace)
+
+The following RenderObject was being processed when the exception was fired: RenderConstrainedBox#5f9a0 relayoutBoundary=up1 NEEDS-LAYOUT NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE:
+  creator: ConstrainedBox ← Align ← MediaQuery ← Padding ← AnimatedPadding ← Semantics ← Dialog ←
+    AlertDialog ← AddEditMenuDialog ← Builder ← DefaultTextStyle ← _CaptureAll ← ⋯
+  parentData: offset=Offset(0.0, 0.0) (can use size)
+  constraints: BoxConstraints(0.0<=w<=720.0, 0.0<=h<=552.0)
+  size: MISSING
+  additionalConstraints: BoxConstraints(280.0<=w<=Infinity, 0.0<=h<=Infinity)
+This RenderObject had the following descendants (showing up to depth 5):
+    child: RenderPhysicalShape#4233e relayoutBoundary=up2 NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE
+      child: RenderCustomPaint#68290 relayoutBoundary=up3 NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE
+        child: _RenderInkFeatures#9e0bb relayoutBoundary=up4 NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE
+          child: RenderSemanticsAnnotations#427e7 relayoutBoundary=up5 NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE
+            child: RenderIntrinsicWidth#50b7a relayoutBoundary=up6 NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE
+════════════════════════════════════════════════════════════════════════════════════════════════════
+══╡ EXCEPTION CAUGHT BY RENDERING LIBRARY ╞═════════════════════════════════════════════════════════
+The following assertion was thrown during performLayout():
+'package:flutter/src/rendering/shifted_box.dart': Failed assertion: line 373 pos 12:
+'child!.hasSize': is not true.
+
+Either the assertion indicates an error in the framework itself, or we should provide substantially
+more information in this error message to help you determine and fix the underlying cause.
+In either case, please report this assertion by filing a bug on GitHub:
+  https://github.com/flutter/flutter/issues/new?template=02_bug.yml
+
+The relevant error-causing widget was:
+  AlertDialog
+  AlertDialog:file:///d:/MD%20Group/madarsa_app/lib/features/kitchen/presentation/screens/kitchen_screen.dart:2675:12
+
+When the exception was thrown, this was the stack:
+#2      RenderAligningShiftedBox.alignChild (package:flutter/src/rendering/shifted_box.dart:373:12)
+#3      RenderPositionedBox.performLayout (package:flutter/src/rendering/shifted_box.dart:491:7)
+#4      RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#5      RenderPadding.performLayout (package:flutter/src/rendering/shifted_box.dart:262:12)
+#6      RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#7      RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:18)
+#8      RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#9      RenderPadding.performLayout (package:flutter/src/rendering/shifted_box.dart:262:12)
+#10     RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#11     RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:18)
+#12     RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#13     RenderPadding.performLayout (package:flutter/src/rendering/shifted_box.dart:262:12)
+#14     RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#15     RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:18)
+#16     RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#17     RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:18)
+#18     RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#19     RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:18)
+#20     RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#21     RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:18)
+#22     RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#23     RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:18)
+#24     RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#25     RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:18)
+#26     RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#27     RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:18)
+#28     RenderOffstage.performLayout (package:flutter/src/rendering/proxy_box.dart:3923:13)
+#29     RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#30     RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:118:18)
+#31     RenderObject.layout (package:flutter/src/rendering/object.dart:2768:7)
+#32     _RenderTheaterMixin.layoutChild (package:flutter/src/widgets/overlay.dart:1084:13)
+#33     _RenderTheater.performLayout (package:flutter/src/widgets/overlay.dart:1429:9)
+#34     RenderObject._layoutWithoutResize (package:flutter/src/rendering/object.dart:2616:7)
+#35     PipelineOwner.flushLayout (package:flutter/src/rendering/object.dart:1174:18)
+#36     PipelineOwner.flushLayout (package:flutter/src/rendering/object.dart:1187:15)
+#37     AutomatedTestWidgetsFlutterBinding.drawFrame (package:flutter_test/src/binding.dart:2133:27)
+#38     RendererBinding._handlePersistentFrameCallback (package:flutter/src/rendering/binding.dart:495:5)
+#39     SchedulerBinding._invokeFrameCallback (package:flutter/src/scheduler/binding.dart:1430:15)
+#40     SchedulerBinding.handleDrawFrame (package:flutter/src/scheduler/binding.dart:1345:9)
+#41     AutomatedTestWidgetsFlutterBinding.pump.<anonymous closure> (package:flutter_test/src/binding.dart:1960:9)
+#44     TestAsyncUtils.guard (package:flutter_test/src/test_async_utils.dart:74:41)
+#45     AutomatedTestWidgetsFlutterBinding.pump (package:flutter_test/src/binding.dart:1949:27)
+#46     WidgetTester.pump.<anonymous closure> (package:flutter_test/src/widget_tester.dart:652:53)
+#49     TestAsyncUtils.guard (package:flutter_test/src/test_async_utils.dart:74:41)
+#50     WidgetTester.pump (package:flutter_test/src/widget_tester.dart:652:27)
+#51     main.<anonymous closure> (file:///d:/MD%20Group/madarsa_app/test/test_dialog.dart:41:18)
+<asynchronous suspension>
+#52     testWidgets.<anonymous closure>.<anonymous closure> (package:flutter_test/src/widget_tester.dart:192:15)
+<asynchronous suspension>
+#53     TestWidgetsFlutterBinding._runTestBody (package:flutter_test/src/binding.dart:1682:5)
+<asynchronous suspension>
+<asynchronous suspension>
+(elided 7 frames from class _AssertionError, dart:async, and package:stack_trace)
+
+The following RenderObject was being processed when the exception was fired: RenderPositionedBox#9e7fa NEEDS-LAYOUT NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE:
+  creator: Align ← MediaQuery ← Padding ← AnimatedPadding ← Semantics ← Dialog ← AlertDialog ←
+    AddEditMenuDialog ← Builder ← DefaultTextStyle ← _CaptureAll ← MediaQuery ← ⋯
+  parentData: offset=Offset(0.0, 0.0) (can use size)
+  constraints: BoxConstraints(w=720.0, h=552.0)
+  size: Size(720.0, 552.0)
+  alignment: Alignment.center
+  textDirection: ltr
+  widthFactor: expand
+  heightFactor: expand
+This RenderObject had the following descendants (showing up to depth 5):
+    child: RenderConstrainedBox#5f9a0 relayoutBoundary=up1 NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE
+      child: RenderPhysicalShape#4233e relayoutBoundary=up2 NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE
+        child: RenderCustomPaint#68290 relayoutBoundary=up3 NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE
+          child: _RenderInkFeatures#9e0bb relayoutBoundary=up4 NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE
+            child: RenderSemanticsAnnotations#427e7 relayoutBoundary=up5 NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE
+════════════════════════════════════════════════════════════════════════════════════════════════════
+══╡ EXCEPTION CAUGHT BY FLUTTER TEST FRAMEWORK ╞════════════════════════════════════════════════════
+The following message was thrown:
+Multiple exceptions (7) were detected during the running of the current test, and at least one was
+unexpected.
+════════════════════════════════════════════════════════════════════════════════════════════════════
+00:01 +0 -1: Test AddEditMenuDialog build [E]
+  Test failed. See exception logs above.
+  The test description was: Test AddEditMenuDialog build
+  
+00:01 +0 -1: Some tests failed.
+
+
