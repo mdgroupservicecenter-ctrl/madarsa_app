@@ -45,6 +45,18 @@ jobs:
             -format UDZO \
             "Madarsa_App_v0.0.0.3_macOS.dmg"
 
+          # 3. Create 1-click wizard installer .pkg (No drag-and-drop needed!)
+          pkgbuild --install-location "/Applications" \
+            --component "$APP_PATH" \
+            "Madarsa_App_v0.0.0.3_macOS_Setup.pkg"
+
+      - name: 📤 Upload PKG 1-Click Installer Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Madarsa-App-macOS-1Click-Installer-PKG
+          path: Madarsa_App_v0.0.0.3_macOS_Setup.pkg
+          retention-days: 30
+
       - name: 📤 Upload DMG Installer Artifact
         uses: actions/upload-artifact@v4
         with:
