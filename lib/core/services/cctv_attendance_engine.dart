@@ -122,6 +122,7 @@ class _SessionCountedPerson {
 /// Spatio-temporal track for persistent identity locking across video frames
 class _ActiveFaceTrack {
   final int trackId;
+  final String cameraId;
   Rect boundingBox;
   DateTime lastSeen;
   StudentAttendance? lockedStudent;
@@ -134,6 +135,7 @@ class _ActiveFaceTrack {
 
   _ActiveFaceTrack({
     required this.trackId,
+    this.cameraId = 'default',
     required this.boundingBox,
     required this.lastSeen,
   });
@@ -453,11 +455,13 @@ class CctvAttendanceEngine {
   Future<List<CctvTrackedFace>> processFrame(
     Uint8List frameBytes, {
     String? cameraName,
+    String? cameraId,
     String? cameraRole,
   }) async {
     if (_isProcessing) return [];
     _isProcessing = true;
     final activeCam = cameraName ?? currentCameraName;
+    final activeCamId = cameraId ?? activeCam;
 
     final bool effectiveIsPeriod;
     if (cameraRole == 'madarsa_gate') {
@@ -519,6 +523,7 @@ class CctvAttendanceEngine {
         double bestTrackScore = -1.0;
 
         for (final existingTrack in _activeTracks) {
+          if (existingTrack.cameraId != activeCamId) continue;
           if (matchedTracksInFrame.contains(existingTrack)) continue;
           if (existingTrack.matches(rect)) {
             final iou = existingTrack.computeIoU(rect);
@@ -541,6 +546,7 @@ class CctvAttendanceEngine {
         } else {
           track = _ActiveFaceTrack(
             trackId: _nextTrackId++,
+            cameraId: activeCamId,
             boundingBox: rect,
             lastSeen: now,
           );

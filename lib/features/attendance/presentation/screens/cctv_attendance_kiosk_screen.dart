@@ -15,6 +15,7 @@ import '../../../../core/services/cctv_attendance_engine.dart';
 import '../../../../core/services/cctv_schedule_resolver.dart';
 import '../../../../core/services/cctv_stream_service.dart';
 import '../../../../core/services/cctv_native_face_engine.dart';
+import '../../../../core/services/cctv_discovery_service.dart';
 import '../../../../core/storage/database_helper.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../data/models/attendance_models.dart';
@@ -57,7 +58,6 @@ class _CctvAttendanceKioskScreenState extends State<CctvAttendanceKioskScreen> {
   Timer? _clockTimer;
 
   DateTime _currentTime = DateTime.now();
-  final ValueNotifier<Uint8List?> _lastFrameNotifier = ValueNotifier<Uint8List?>(null);
   final ValueNotifier<List<CctvTrackedFace>> _trackedFacesNotifier = ValueNotifier<List<CctvTrackedFace>>([]);
   final List<CctvAttendanceEvent> _eventsFeed = [];
 
@@ -96,6 +96,11 @@ class _CctvAttendanceKioskScreenState extends State<CctvAttendanceKioskScreen> {
   bool _isAntiSpoofingEnabled = true;
   int _spoofSensitivityLevel = 2; // 0=Off, 1=Low, 2=Medium, 3=High
 
+  // Multi-Camera Round-Robin Fair AI Scheduler & Live Headcount Aggregator
+  final Map<String, CctvFramePayload> _latestFramesByCamera = {};
+  final Map<String, DateTime> _lastAiInferenceByCamera = {};
+  final Map<String, int> _multiCamLiveCountByCamera = {};
+
   @override
   void initState() {
     super.initState();
@@ -126,7 +131,9 @@ class _CctvAttendanceKioskScreenState extends State<CctvAttendanceKioskScreen> {
     _updateAutoSchedule(_currentTime);
 
     _peopleCountSubscription = _engine.onPeopleCountChanged.listen((counts) {
-      _peopleCountNotifier.value = counts;
+      if (!_isMultiCamMode) {
+        _peopleCountNotifier.value = counts;
+      }
     });
 
     _streamService.loadSavedProfiles().then((_) {
@@ -400,25 +407,74 @@ class _CctvAttendanceKioskScreenState extends State<CctvAttendanceKioskScreen> {
       if (!_isPaused && mounted) {
         final now = DateTime.now();
         if (!_isMultiCamMode) {
-          if (_streamService.config.sourceType != CctvSourceType.webcam || _streamService.isNativeOpenCvStreaming) {
-            _lastFrameNotifier.value = payload.bytes;
-          }
-          // Throttle AI Face Recognition (every >= 280ms, ~3.5 inferences/sec)
-          // Video frames render at full 60 FPS smoothly without AI inference stalling the UI thread
-          if (!_engine.isProcessing && now.difference(_lastAiInferenceTime).inMilliseconds >= 280) {
+          // AI Face Recognition Throttle: >= 330ms (~3 inferences/sec)
+          // Video frames render at full 60 FPS smoothly via singleDisplayImageNotifier directly on the GPU
+          if (!_engine.isProcessing && now.difference(_lastAiInferenceTime).inMilliseconds >= 330) {
             _lastAiInferenceTime = now;
-            _engine.processFrame(payload.bytes, cameraName: payload.cameraName, cameraRole: payload.cameraRole);
+            _engine.processFrame(
+              payload.bytes,
+              cameraName: payload.cameraName,
+              cameraId: payload.cameraId,
+              cameraRole: payload.cameraRole,
+            );
           }
         } else {
-          final matches = _streamService.activeChannels.where((c) => c.profile.id == payload.cameraId);
-          if (matches.isNotEmpty) {
-            final channel = matches.first;
-            channel.lastFrameNotifier.value = payload.bytes;
-            if (!_engine.isProcessing && now.difference(_lastAiInferenceTime).inMilliseconds >= 280) {
+          // Multi-Camera Mode:
+          // 1. Buffer latest frame for this camera source (overwriting previous to keep memory O(1))
+          _latestFramesByCamera[payload.cameraId] = payload;
+
+          // 2. Fair Round-Robin AI Scheduler:
+          // Ensure strictly ONE frame is processed by AI at a time, spaced by >= 250ms.
+          // Cycles through all active camera sources evenly so no camera is ever starved.
+          if (!_engine.isProcessing && now.difference(_lastAiInferenceTime).inMilliseconds >= 250) {
+            final activeSourceIds = _streamService.activeChannels
+                .map((c) => c.profile.id)
+                .toSet();
+
+            // Select the least recently processed active camera with a buffered frame
+            String? candidateCamId;
+            DateTime oldestInference = now;
+
+            for (final camId in activeSourceIds) {
+              if (!_latestFramesByCamera.containsKey(camId)) continue;
+              final lastInferred = _lastAiInferenceByCamera[camId] ?? DateTime.fromMillisecondsSinceEpoch(0);
+              if (candidateCamId == null || lastInferred.isBefore(oldestInference)) {
+                oldestInference = lastInferred;
+                candidateCamId = camId;
+              }
+            }
+
+            if (candidateCamId != null && _latestFramesByCamera.containsKey(candidateCamId)) {
+              final frameToProcess = _latestFramesByCamera[candidateCamId]!;
               _lastAiInferenceTime = now;
-              _engine.processFrame(payload.bytes, cameraName: payload.cameraName, cameraRole: payload.cameraRole).then((faces) {
+              _lastAiInferenceByCamera[candidateCamId] = now;
+
+              final sharedChannels = _streamService.getChannelsSharingSource(candidateCamId);
+              final targetChannels = sharedChannels.isNotEmpty
+                  ? sharedChannels
+                  : _streamService.activeChannels.where((c) => c.profile.id == candidateCamId).toList();
+
+              _engine.processFrame(
+                frameToProcess.bytes,
+                cameraName: frameToProcess.cameraName,
+                cameraId: frameToProcess.cameraId,
+                cameraRole: frameToProcess.cameraRole,
+              ).then((faces) {
                 if (mounted) {
-                  channel.trackedFacesNotifier.value = faces;
+                  for (final ch in targetChannels) {
+                    ch.trackedFacesNotifier.value = faces;
+                  }
+                  if (_isMultiCamMode && _isPeopleCountingEnabled) {
+                    _multiCamLiveCountByCamera[candidateCamId!] = faces.length;
+                    int aggregateLive = 0;
+                    for (final srcId in activeSourceIds) {
+                      aggregateLive += (_multiCamLiveCountByCamera[srcId] ?? 0);
+                    }
+                    _peopleCountNotifier.value = (
+                      liveCount: aggregateLive,
+                      totalCount: _engine.totalSessionPeopleCount,
+                    );
+                  }
                 }
               });
             }
@@ -515,9 +571,11 @@ class _CctvAttendanceKioskScreenState extends State<CctvAttendanceKioskScreen> {
     _feedUpdateNotifier.dispose();
     _attendanceActiveNotifier.dispose();
     _trackedFacesNotifier.dispose();
-    _lastFrameNotifier.dispose();
     _streamService.stopMultiCameraStreams();
     _streamService.stopStream();
+    _latestFramesByCamera.clear();
+    _lastAiInferenceByCamera.clear();
+    _multiCamLiveCountByCamera.clear();
     _engine.dispose();
     super.dispose();
   }
@@ -1185,7 +1243,7 @@ class _CctvAttendanceKioskScreenState extends State<CctvAttendanceKioskScreen> {
         mainAxisSize: MainAxisSize.min,
         children: [
           PopupMenuButton<int>(
-            tooltip: 'Anti-Spoofing Sensitivity Level / اسفوف اٹیک لیول',
+            tooltip: 'Anti-Spoofing Sensitivity Level',
             offset: const Offset(0, 42),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             onSelected: _setSpoofSensitivityLevel,
@@ -1385,6 +1443,8 @@ class _CctvAttendanceKioskScreenState extends State<CctvAttendanceKioskScreen> {
                 constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
                 onPressed: () {
                   _engine.resetPeopleCount();
+                  _multiCamLiveCountByCamera.clear();
+                  _peopleCountNotifier.value = (liveCount: 0, totalCount: 0);
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text('Headcount reset to 0.'),
@@ -1459,10 +1519,16 @@ class _CctvAttendanceKioskScreenState extends State<CctvAttendanceKioskScreen> {
                         child: CameraPreview(_streamService.cameraController!),
                       ),
                     )
-                  : _CctvStreamFrameRenderer(
-                      frameNotifier: _lastFrameNotifier,
-                      fit: BoxFit.contain,
-                      placeholder: AnimatedBuilder(
+                  : ValueListenableBuilder<ui.Image?>(
+                      valueListenable: _streamService.singleDisplayImageNotifier,
+                      builder: (context, image, _) {
+                        if (image != null) {
+                          return RawImage(
+                            image: image,
+                            fit: BoxFit.contain,
+                          );
+                        }
+                        return AnimatedBuilder(
                         animation: _streamService,
                         builder: (context, _) {
                           final isConnecting = _streamService.isConnecting;
@@ -1643,8 +1709,9 @@ class _CctvAttendanceKioskScreenState extends State<CctvAttendanceKioskScreen> {
                             ),
                           );
                         },
-                      ),
-                    ),
+                      );
+                    },
+                  ),
             ),
 
             // 2. High-Tech Viewfinder HUD Overlay (Neon Green & White Badges)
@@ -2133,6 +2200,11 @@ class _CctvAttendanceKioskScreenState extends State<CctvAttendanceKioskScreen> {
       _isMultiCamMode = !_isMultiCamMode;
     });
 
+    _latestFramesByCamera.clear();
+    _lastAiInferenceByCamera.clear();
+    _multiCamLiveCountByCamera.clear();
+    _engine.clearActiveTracks();
+
     if (_isMultiCamMode) {
       await _streamService.stopStream();
       await _streamService.startMultiCameraStreams(_streamService.cameraProfiles);
@@ -2162,23 +2234,111 @@ class _CctvAttendanceKioskScreenState extends State<CctvAttendanceKioskScreen> {
       );
     }
 
-    final int crossAxisCount = channels.length <= 2 ? channels.length : 2;
+    // Dynamic, responsive grid layout: adapts cleanly for 1 up to 10+ cameras
+    final int crossAxisCount = switch (channels.length) {
+      1 => 1,
+      2 => 2,
+      3 || 4 => 2,
+      5 || 6 => 3,
+      7 || 8 || 9 => 3,
+      _ => 4,
+    };
 
     return Container(
       color: const Color(0xFF0B1120),
-      padding: const EdgeInsets.all(8),
-      child: GridView.builder(
-        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: crossAxisCount,
-          crossAxisSpacing: 8,
-          mainAxisSpacing: 8,
-          childAspectRatio: 16 / 9,
-        ),
-        itemCount: channels.length,
-        itemBuilder: (context, index) {
-          final channel = channels[index];
-          return _buildSingleChannelTile(channel, index + 1);
-        },
+      child: Column(
+        children: [
+          // Security Grid Multiplexer Top Bar
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+            decoration: BoxDecoration(
+              color: const Color(0xFF0F172A),
+              border: Border(bottom: BorderSide(color: Colors.white.withValues(alpha: 0.1))),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.grid_view_rounded, size: 16, color: Color(0xFF10B981)),
+                const SizedBox(width: 8),
+                Text(
+                  'Multi-Cam Security Grid (${channels.length} Tiles Active)',
+                  style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(width: 10),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0F766E).withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(color: const Color(0xFF0F766E).withValues(alpha: 0.4)),
+                  ),
+                  child: const Text(
+                    '⚡ Stream Multiplexer Active: Run any camera across multiple grid tiles simultaneously!',
+                    style: TextStyle(color: Color(0xFF5EEAD4), fontSize: 10, fontWeight: FontWeight.w600),
+                  ),
+                ),
+                const Spacer(),
+                FilledButton.tonalIcon(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFF0F766E).withValues(alpha: 0.25),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  icon: const Icon(Icons.bolt_rounded, size: 14, color: Color(0xFF5EEAD4)),
+                  label: const Text('⚡ Apply Cam to All Tiles', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF5EEAD4))),
+                  onPressed: () async {
+                    final activeProf = _streamService.activeProfile ?? _streamService.cameraProfiles.first;
+                    await _streamService.applySourceToAllProfiles(activeProf.id);
+                    if (mounted) {
+                      setState(() {});
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          backgroundColor: const Color(0xFF0F766E),
+                          content: Text('✅ "${activeProf.name}" applied to all grid tiles!'),
+                          duration: const Duration(seconds: 2),
+                        ),
+                      );
+                    }
+                  },
+                ),
+                const SizedBox(width: 8),
+                FilledButton.icon(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFF0F766E),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  icon: const Icon(Icons.add_to_photos_rounded, size: 14),
+                  label: const Text('+ Clone / Add Grid Tile', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                  onPressed: () async {
+                    final activeProf = _streamService.activeProfile ?? _streamService.cameraProfiles.first;
+                    await _streamService.duplicateCameraProfile(activeProf.id);
+                    if (mounted) setState(() {});
+                  },
+                ),
+              ],
+            ),
+          ),
+
+          // The Grid of Camera Tiles
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(8),
+              child: GridView.builder(
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: crossAxisCount,
+                  crossAxisSpacing: 8,
+                  mainAxisSpacing: 8,
+                  childAspectRatio: 16 / 9,
+                ),
+                itemCount: channels.length,
+                itemBuilder: (context, index) {
+                  final channel = channels[index];
+                  return _buildSingleChannelTile(channel, index + 1);
+                },
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -2194,13 +2354,50 @@ class _CctvAttendanceKioskScreenState extends State<CctvAttendanceKioskScreen> {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          // 1. Live Video Frame for this channel
-          _CctvStreamFrameRenderer(
-            frameNotifier: channel.lastFrameNotifier,
-            fit: BoxFit.contain,
-            placeholder: const Center(
-              child: CircularProgressIndicator(color: Color(0xFF10B981), strokeWidth: 2),
-            ),
+          // 1. Ultra-Low CPU Pre-Decoded GPU Texture Renderer (Zero CPU JPEG decoding in Widget!)
+          ValueListenableBuilder<ui.Image?>(
+            valueListenable: channel.displayImageNotifier,
+            builder: (context, image, _) {
+              if (image != null) {
+                return RawImage(
+                  image: image,
+                  fit: BoxFit.contain,
+                );
+              }
+              return ValueListenableBuilder<bool>(
+                valueListenable: channel.isOnlineNotifier,
+                builder: (context, isOnline, _) {
+                  return Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          isOnline ? Icons.videocam_rounded : Icons.videocam_off_rounded,
+                          color: isOnline ? const Color(0xFF10B981) : Colors.white30,
+                          size: 32,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          isOnline ? 'Connecting Stream...' : 'Feed Offline / Standby',
+                          style: TextStyle(
+                            color: isOnline ? const Color(0xFF10B981) : Colors.white54,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          channel.profile.sourceType == CctvSourceType.webcam
+                              ? 'Webcam #${channel.profile.cameraIndex}'
+                              : channel.profile.ipUrl,
+                          style: const TextStyle(color: Colors.white24, fontSize: 9.5, fontFamily: 'monospace'),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              );
+            },
           ),
 
           // 2. HUD Overlay for this specific camera
@@ -2220,38 +2417,129 @@ class _CctvAttendanceKioskScreenState extends State<CctvAttendanceKioskScreen> {
             ),
           ),
 
-          // 3. Channel Label (Top-Left)
+          // 3. Channel Label (Top-Left) with Camera Switcher / Multiplexer Dropdown
           Positioned(
             left: 8,
             top: 8,
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.75),
+                color: Colors.black.withValues(alpha: 0.82),
                 borderRadius: BorderRadius.circular(6),
                 border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.6)),
               ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 8,
-                    height: 8,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF10B981),
-                      shape: BoxShape.circle,
-                    ),
+              child: Theme(
+                data: Theme.of(context).copyWith(
+                  popupMenuTheme: PopupMenuThemeData(
+                    color: const Color(0xFF1E293B),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   ),
-                  const SizedBox(width: 6),
-                  Text(
-                    'CAM $channelNumber: ${channel.profile.name}',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                    ),
+                ),
+                child: PopupMenuButton<String>(
+                  tooltip: 'Click to select which camera to show in Grid $channelNumber',
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  offset: const Offset(0, 32),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      ValueListenableBuilder<bool>(
+                        valueListenable: channel.isOnlineNotifier,
+                        builder: (context, isOnline, _) {
+                          return Container(
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: isOnline ? const Color(0xFF10B981) : const Color(0xFFEF4444),
+                              shape: BoxShape.circle,
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        'CAM $channelNumber: ${channel.profile.name}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      const Icon(Icons.arrow_drop_down_rounded, color: Colors.white70, size: 16),
+                    ],
                   ),
-                ],
+                  itemBuilder: (ctx) => [
+                    const PopupMenuItem<String>(
+                      enabled: false,
+                      height: 28,
+                      child: Text(
+                        'ASSIGN CAMERA FEED TO THIS TILE:',
+                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF94A3B8)),
+                      ),
+                    ),
+                    const PopupMenuDivider(height: 6),
+                    ..._streamService.cameraProfiles.map((prof) {
+                      final isSelected = prof.ipUrl == channel.profile.ipUrl && prof.sourceType == channel.profile.sourceType;
+                      return PopupMenuItem<String>(
+                        value: 'assign_${prof.id}',
+                        height: 36,
+                        child: Row(
+                          children: [
+                            Icon(
+                              isSelected ? Icons.check_circle_rounded : Icons.videocam_outlined,
+                              size: 16,
+                              color: isSelected ? const Color(0xFF10B981) : Colors.white70,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                prof.name,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                  color: isSelected ? Colors.white : Colors.white70,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              prof.sourceType == CctvSourceType.webcam ? 'Webcam' : prof.ipUrl,
+                              style: const TextStyle(fontSize: 9, color: Colors.white38, fontFamily: 'monospace'),
+                            ),
+                          ],
+                        ),
+                      );
+                    }),
+                    const PopupMenuDivider(height: 6),
+                    const PopupMenuItem<String>(
+                      value: 'duplicate_tile',
+                      height: 36,
+                      child: Row(
+                        children: [
+                          Icon(Icons.add_to_photos_rounded, size: 16, color: Color(0xFF38BDF8)),
+                          SizedBox(width: 8),
+                          Text(
+                            '+ Clone / Duplicate into New Grid Tile',
+                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF38BDF8)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                  onSelected: (action) async {
+                    if (action == 'duplicate_tile') {
+                      await _streamService.duplicateCameraProfile(channel.profile.id);
+                      if (mounted) setState(() {});
+                    } else if (action.startsWith('assign_')) {
+                      final profId = action.substring('assign_'.length);
+                      final selected = _streamService.cameraProfiles.where((p) => p.id == profId).firstOrNull;
+                      if (selected != null) {
+                        await _streamService.assignCameraToChannel(channel.profile.id, selected);
+                        if (mounted) setState(() {});
+                      }
+                    }
+                  },
+                ),
               ),
             ),
           ),
@@ -2260,10 +2548,10 @@ class _CctvAttendanceKioskScreenState extends State<CctvAttendanceKioskScreen> {
           Positioned(
             right: 8,
             top: 8,
-            child: ValueListenableBuilder<double>(
-              valueListenable: _streamService.actualFpsNotifier,
-              builder: (context, fps, _) {
-                final displayFps = fps > 0 ? fps.round() : _streamService.config.targetFps;
+            child: ValueListenableBuilder<bool>(
+              valueListenable: channel.isOnlineNotifier,
+              builder: (context, isOnline, _) {
+                final displayFps = isOnline ? _streamService.config.targetFps : 0;
                 return Container(
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                   decoration: BoxDecoration(
@@ -2271,8 +2559,12 @@ class _CctvAttendanceKioskScreenState extends State<CctvAttendanceKioskScreen> {
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
-                    '⚡ $displayFps FPS',
-                    style: const TextStyle(color: Color(0xFF38BDF8), fontSize: 10, fontWeight: FontWeight.w700),
+                    isOnline ? '⚡ $displayFps FPS' : '⚪ Standby',
+                    style: TextStyle(
+                      color: isOnline ? const Color(0xFF38BDF8) : Colors.white38,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 );
               },
@@ -2617,14 +2909,24 @@ class _CctvAttendanceKioskScreenState extends State<CctvAttendanceKioskScreen> {
   // ═══════════════════════════════════════════════════════════════════════
   void _showLightSettingsDialog() {
     final config = _streamService.config;
-    final ipUrlCtrl = TextEditingController(text: config.ipUrl);
-    final userCtrl = TextEditingController(text: config.username);
+    String initialIp = config.ipUrl;
+    if (initialIp.contains('/ISAPI/') || initialIp.contains('/cgi-bin/')) {
+      final parsed = CctvStreamService.parseHostAndPort(initialIp);
+      if (parsed.host.isNotEmpty) initialIp = parsed.host;
+    }
+    final ipUrlCtrl = TextEditingController(text: initialIp);
+    final userCtrl = TextEditingController(text: config.username.isNotEmpty ? config.username : 'admin');
     final passCtrl = TextEditingController(text: config.password);
 
     String? testResultMsg;
     bool? testSuccess;
     bool isTesting = false;
     int activeTab = 0; // 0: Single Camera & AI, 1: Multi-Camera Manager
+
+    List<DiscoveredCamera> discoveredCameras = [];
+    bool isScanningNetwork = false;
+    String? scanStatusMsg;
+    Uint8List? liveSampleFrameBytes;
 
     showDialog(
       context: context,
@@ -2658,7 +2960,7 @@ class _CctvAttendanceKioskScreenState extends State<CctvAttendanceKioskScreen> {
               ],
             ),
             content: SizedBox(
-              width: math.min(580.0, MediaQuery.of(ctx).size.width - 32),
+              width: math.min(680.0, MediaQuery.of(ctx).size.width - 32),
               child: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -2778,9 +3080,123 @@ class _CctvAttendanceKioskScreenState extends State<CctvAttendanceKioskScreen> {
                       ),
                       const SizedBox(height: 16),
 
-                      // Quick Camera Presets (for IP Camera)
+                      // 🌐 UNIVERSAL IP CAMERA & WI-FI AUTO-DISCOVERY (Hik-Partner Pro style)
                       if (currentCfg.sourceType == CctvSourceType.ipCamera) ...[
-                        const Text('Quick Presets:',
+                        // 1. Auto-Discovery Bar (Search Wi-Fi / LAN Cameras like Hik-Partner Pro)
+                        Container(
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF0FDF4),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: const Color(0xFF86EFAC)),
+                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(Icons.wifi_tethering_rounded, color: Color(0xFF16A34A), size: 18),
+                                  const SizedBox(width: 8),
+                                  const Expanded(
+                                    child: Text(
+                                      'Wi-Fi / Local Network Camera Discovery',
+                                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Color(0xFF15803D)),
+                                    ),
+                                  ),
+                                  FilledButton.icon(
+                                    style: FilledButton.styleFrom(
+                                      backgroundColor: const Color(0xFF16A34A),
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                      visualDensity: VisualDensity.compact,
+                                    ),
+                                    icon: isScanningNetwork
+                                        ? const SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                                        : const Icon(Icons.radar_rounded, size: 14),
+                                    label: Text(isScanningNetwork ? 'Scanning...' : 'Scan Cameras', style: const TextStyle(fontSize: 11)),
+                                    onPressed: isScanningNetwork
+                                        ? null
+                                        : () async {
+                                            setDlgState(() {
+                                              isScanningNetwork = true;
+                                              scanStatusMsg = 'Searching Wi-Fi & LAN (Hikvision SADP, ONVIF, Subnet sweep)...';
+                                            });
+                                            final found = await CctvDiscoveryService.discoverNetworkCameras();
+                                            setDlgState(() {
+                                              isScanningNetwork = false;
+                                              discoveredCameras = found;
+                                              if (found.isEmpty) {
+                                                scanStatusMsg = 'No IP cameras responded to auto-discovery. You can enter the camera IP address manually below.';
+                                              } else {
+                                                scanStatusMsg = 'Found ${found.length} camera(s) online! Click a camera to select:';
+                                              }
+                                            });
+                                          },
+                                  ),
+                                ],
+                              ),
+                              if (scanStatusMsg != null) ...[
+                                const SizedBox(height: 6),
+                                Text(
+                                  scanStatusMsg!,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: discoveredCameras.isEmpty ? const Color(0xFFB45309) : const Color(0xFF15803D),
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                              if (discoveredCameras.isNotEmpty) ...[
+                                const SizedBox(height: 8),
+                                Container(
+                                  constraints: const BoxConstraints(maxHeight: 140),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: Colors.grey.shade200),
+                                  ),
+                                  child: ListView.separated(
+                                    shrinkWrap: true,
+                                    itemCount: discoveredCameras.length,
+                                    separatorBuilder: (_, index) => const Divider(height: 1),
+                                    itemBuilder: (ctx, idx) {
+                                      final cam = discoveredCameras[idx];
+                                      return ListTile(
+                                        dense: true,
+                                        contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+                                        leading: Container(
+                                          padding: const EdgeInsets.all(6),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFDCFCE7),
+                                            borderRadius: BorderRadius.circular(6),
+                                          ),
+                                          child: const Icon(Icons.videocam_rounded, color: Color(0xFF16A34A), size: 18),
+                                        ),
+                                        title: Text(
+                                          cam.name,
+                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                                        ),
+                                        subtitle: Text(
+                                          'IP: ${cam.ip} • Port: ${cam.port} • Protocol: ${cam.discoveryMethod}',
+                                          style: TextStyle(fontSize: 10, color: Colors.grey.shade600),
+                                        ),
+                                        trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 12, color: Color(0xFF16A34A)),
+                                        onTap: () {
+                                          ipUrlCtrl.text = cam.ip;
+                                          if (userCtrl.text.isEmpty) userCtrl.text = 'admin';
+                                          setDlgState(() {});
+                                        },
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+
+                        // Brand Quick-Select Chips (Zero technical URLs injected!)
+                        const Text('Camera Brand Helper / Preset:',
                             style: TextStyle(color: Color(0xFF64748B), fontSize: 11, fontWeight: FontWeight.bold)),
                         const SizedBox(height: 6),
                         Wrap(
@@ -2788,39 +3204,100 @@ class _CctvAttendanceKioskScreenState extends State<CctvAttendanceKioskScreen> {
                           runSpacing: 6,
                           children: [
                             ActionChip(
+                              avatar: const Icon(Icons.auto_awesome_rounded, size: 14, color: Color(0xFF0F766E)),
+                              label: const Text('✨ Auto-Detect IP / Port', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                              onPressed: () async {
+                                final input = ipUrlCtrl.text.trim();
+                                if (input.isNotEmpty) {
+                                  setDlgState(() {
+                                    testResultMsg = 'Probing $input for active camera ports...';
+                                    testSuccess = null;
+                                  });
+                                  final res = await CctvDiscoveryService.probeSingleIp(input);
+                                  if (res != null) {
+                                    ipUrlCtrl.text = res.suggestedStreamUrl ?? (res.port != 80 && res.port != 554 ? '${res.ip}:${res.port}' : res.ip);
+                                    setDlgState(() {
+                                      testResultMsg = 'Auto-detected ${res.brand} on port ${res.port}! ✅';
+                                      testSuccess = true;
+                                    });
+                                  } else {
+                                    setDlgState(() {
+                                      testResultMsg = 'Device at $input did not respond on common camera ports.';
+                                      testSuccess = false;
+                                    });
+                                  }
+                                } else {
+                                  setDlgState(() {
+                                    isScanningNetwork = true;
+                                    scanStatusMsg = 'Searching Wi-Fi & LAN for online cameras...';
+                                  });
+                                  final found = await CctvDiscoveryService.discoverNetworkCameras();
+                                  setDlgState(() {
+                                    isScanningNetwork = false;
+                                    discoveredCameras = found;
+                                    if (found.isNotEmpty) {
+                                      ipUrlCtrl.text = found.first.ip + (found.first.port != 80 && found.first.port != 554 ? ':${found.first.port}' : '');
+                                      scanStatusMsg = 'Auto-detected ${found.first.brand} (${found.first.ip})! ✅';
+                                    } else {
+                                      scanStatusMsg = 'No online cameras responded. Please enter camera IP manually below.';
+                                    }
+                                  });
+                                }
+                              },
+                            ),
+                            ActionChip(
+                              avatar: const Icon(Icons.phone_android_rounded, size: 14, color: Color(0xFF7C3AED)),
                               label: const Text('📱 Mobile IP Webcam', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
                               onPressed: () {
-                                ipUrlCtrl.text = 'http://192.168.1.50:8080/shot.jpg';
-                                userCtrl.text = '';
-                                passCtrl.text = '';
+                                final cur = ipUrlCtrl.text.trim();
+                                if (cur.isNotEmpty) {
+                                  final host = cur.replaceAll(RegExp(r'^https?://'), '').split('/')[0].split(':')[0];
+                                  ipUrlCtrl.text = '$host:8080';
+                                } else {
+                                  ipUrlCtrl.text = '192.168.1.50:8080';
+                                }
                                 setDlgState(() {});
                               },
                             ),
                             ActionChip(
-                              label: const Text('📹 Hikvision Snapshot', style: TextStyle(fontSize: 11)),
+                              avatar: const Icon(Icons.videocam_rounded, size: 14, color: Color(0xFFDC2626)),
+                              label: const Text('📹 Hikvision', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
                               onPressed: () {
-                                ipUrlCtrl.text = 'http://192.168.1.64/ISAPI/Streaming/channels/101/picture';
+                                final cur = ipUrlCtrl.text.trim();
+                                if (cur.isNotEmpty) {
+                                  final host = cur.replaceAll(RegExp(r'^https?://'), '').split('/')[0].split(':')[0];
+                                  ipUrlCtrl.text = host;
+                                } else {
+                                  ipUrlCtrl.text = '192.168.1.64';
+                                }
                                 setDlgState(() {});
                               },
                             ),
                             ActionChip(
-                              label: const Text('⚡ Hikvision NVR (RTSP)', style: TextStyle(fontSize: 11)),
+                              avatar: const Icon(Icons.camera_alt_rounded, size: 14, color: Color(0xFF2563EB)),
+                              label: const Text('🎥 CP Plus / Dahua', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
                               onPressed: () {
-                                ipUrlCtrl.text = 'rtsp://192.168.1.64:554/Streaming/Channels/101';
+                                final cur = ipUrlCtrl.text.trim();
+                                if (cur.isNotEmpty) {
+                                  final host = cur.replaceAll(RegExp(r'^https?://'), '').split('/')[0].split(':')[0];
+                                  ipUrlCtrl.text = host;
+                                } else {
+                                  ipUrlCtrl.text = '192.168.1.250';
+                                }
                                 setDlgState(() {});
                               },
                             ),
                             ActionChip(
-                              label: const Text('🎥 CP Plus / Dahua', style: TextStyle(fontSize: 11)),
+                              avatar: const Icon(Icons.wifi_rounded, size: 14, color: Color(0xFF0D9488)),
+                              label: const Text('📡 TP-Link Tapo', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
                               onPressed: () {
-                                ipUrlCtrl.text = 'http://192.168.1.250/cgi-bin/snapshot.cgi';
-                                setDlgState(() {});
-                              },
-                            ),
-                            ActionChip(
-                              label: const Text('📡 TP-Link Tapo', style: TextStyle(fontSize: 11)),
-                              onPressed: () {
-                                ipUrlCtrl.text = 'http://192.168.1.100:8080/shot.jpg';
+                                final cur = ipUrlCtrl.text.trim();
+                                if (cur.isNotEmpty) {
+                                  final host = cur.replaceAll(RegExp(r'^https?://'), '').split('/')[0].split(':')[0];
+                                  ipUrlCtrl.text = host;
+                                } else {
+                                  ipUrlCtrl.text = '192.168.1.100';
+                                }
                                 setDlgState(() {});
                               },
                             ),
@@ -2828,14 +3305,16 @@ class _CctvAttendanceKioskScreenState extends State<CctvAttendanceKioskScreen> {
                         ),
                         const SizedBox(height: 12),
 
-                        // IP Camera URL Input
-                        const Text('Camera IP Address or Stream URL:',
+                        // Clean Camera IP Input
+                        const Text('Camera IP Address (Wi-Fi or LAN):',
                             style: TextStyle(color: Color(0xFF0F172A), fontSize: 12, fontWeight: FontWeight.bold)),
                         const SizedBox(height: 4),
                         TextField(
                           controller: ipUrlCtrl,
                           decoration: InputDecoration(
-                            hintText: 'e.g. 192.168.1.17 or http://192.168.1.100:8080/shot.jpg',
+                            hintText: 'e.g. 192.168.1.64 or 192.168.1.50:8080',
+                            helperText: 'Enter camera IP address — Direct Wi-Fi/LAN connection without complex NVR setup!',
+                            helperStyle: const TextStyle(fontSize: 10, color: Color(0xFF0F766E), fontWeight: FontWeight.w600),
                             filled: true,
                             fillColor: const Color(0xFFF8FAFC),
                             contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -2898,11 +3377,16 @@ class _CctvAttendanceKioskScreenState extends State<CctvAttendanceKioskScreen> {
                               icon: isTesting
                                   ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2))
                                   : const Icon(Icons.wifi_find_rounded, size: 16),
-                              label: Text(isTesting ? 'Testing Connection...' : 'Test Camera Connection'),
+                              label: Text(isTesting ? 'Auto-Negotiating Camera Stream...' : 'Test Camera Connection'),
                               onPressed: isTesting
                                   ? null
                                   : () async {
-                                      setDlgState(() => isTesting = true);
+                                      setDlgState(() {
+                                        isTesting = true;
+                                        testResultMsg = null;
+                                        testSuccess = null;
+                                        liveSampleFrameBytes = null;
+                                      });
                                       final testCfg = currentCfg.copyWith(
                                         ipUrl: ipUrlCtrl.text.trim(),
                                         username: userCtrl.text.trim(),
@@ -2913,8 +3397,8 @@ class _CctvAttendanceKioskScreenState extends State<CctvAttendanceKioskScreen> {
                                         isTesting = false;
                                         testSuccess = res['success'] == true;
                                         testResultMsg = res['message']?.toString();
-                                        if (testSuccess == true && res['workingUrl'] != null) {
-                                          ipUrlCtrl.text = res['workingUrl'].toString();
+                                        if (res['bytes'] is Uint8List) {
+                                          liveSampleFrameBytes = res['bytes'] as Uint8List;
                                         }
                                       });
                                     },
@@ -2930,13 +3414,31 @@ class _CctvAttendanceKioskScreenState extends State<CctvAttendanceKioskScreen> {
                               borderRadius: BorderRadius.circular(8),
                               border: Border.all(color: testSuccess == true ? const Color(0xFFBBF7D0) : const Color(0xFFFECACA)),
                             ),
-                            child: Text(
-                              testResultMsg!,
-                              style: TextStyle(
-                                color: testSuccess == true ? const Color(0xFF15803D) : const Color(0xFFB91C1C),
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                              ),
+                            child: Row(
+                              children: [
+                                if (testSuccess == true && liveSampleFrameBytes != null) ...[
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(6),
+                                    child: Image.memory(
+                                      liveSampleFrameBytes!,
+                                      width: 64,
+                                      height: 48,
+                                      fit: BoxFit.cover,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                ],
+                                Expanded(
+                                  child: Text(
+                                    testResultMsg!,
+                                    style: TextStyle(
+                                      color: testSuccess == true ? const Color(0xFF15803D) : const Color(0xFFB91C1C),
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ],
@@ -3149,7 +3651,7 @@ class _CctvAttendanceKioskScreenState extends State<CctvAttendanceKioskScreen> {
                       if (_isAntiSpoofingEnabled) ...[
                         const SizedBox(height: 6),
                         const Text(
-                          'Anti-Spoofing Sensitivity Level / اسفوف اٹیک لیول:',
+                          'Anti-Spoofing Sensitivity Level:',
                           style: TextStyle(color: Color(0xFF0F172A), fontSize: 12, fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 6),
@@ -3188,32 +3690,89 @@ class _CctvAttendanceKioskScreenState extends State<CctvAttendanceKioskScreen> {
                       // ═══════════════════════════════════════════════════════
                       // TAB 2: MULTI-CAMERA CHANNELS MANAGEMENT
                       // ═══════════════════════════════════════════════════════
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              const Text(
-                                'Configured Camera Profiles',
-                                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                              const Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Configured Camera Profiles',
+                                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                                    ),
+                                    Text(
+                                      'Each camera streams live and performs face recognition in the multi-camera grid',
+                                      style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                                    ),
+                                  ],
+                                ),
                               ),
-                              Text(
-                                'Manage cameras here for multi-camera live grid monitoring',
-                                style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                              const SizedBox(width: 8),
+                              FilledButton.icon(
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: const Color(0xFF0F766E),
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                  visualDensity: VisualDensity.compact,
+                                ),
+                                icon: const Icon(Icons.add_rounded, size: 16),
+                                label: const Text('+ Add Camera', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                                onPressed: () {
+                                  _showAddEditCameraModal(ctx, setDlgState);
+                                },
                               ),
                             ],
                           ),
-                          FilledButton.icon(
-                            style: FilledButton.styleFrom(
-                              backgroundColor: const Color(0xFF0F766E),
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                            ),
-                            icon: const Icon(Icons.add_rounded, size: 18),
-                            label: const Text('+ Add Camera', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                            onPressed: () {
-                              _showAddEditCameraModal(ctx, setDlgState);
-                            },
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 6,
+                            children: [
+                              OutlinedButton.icon(
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                                  visualDensity: VisualDensity.compact,
+                                ),
+                                icon: const Icon(Icons.bolt_rounded, size: 15, color: Color(0xFF0F766E)),
+                                label: const Text('⚡ Apply to All Grids', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF0F766E))),
+                                onPressed: () async {
+                                  final messenger = ScaffoldMessenger.of(context);
+                                  final activeProf = _streamService.activeProfile ?? _streamService.cameraProfiles.first;
+                                  await _streamService.applySourceToAllProfiles(activeProf.id);
+                                  setDlgState(() {});
+                                  setState(() {});
+                                  messenger.showSnackBar(
+                                    SnackBar(
+                                      backgroundColor: const Color(0xFF0F766E),
+                                      content: Text('✅ "${activeProf.name}" applied to all ${_streamService.cameraProfiles.length} grid tiles!'),
+                                    ),
+                                  );
+                                },
+                              ),
+                              OutlinedButton.icon(
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                                  visualDensity: VisualDensity.compact,
+                                ),
+                                icon: const Icon(Icons.check_circle_outline_rounded, size: 15, color: Color(0xFF16A34A)),
+                                label: const Text('🟢 Activate All', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF16A34A))),
+                                onPressed: () async {
+                                  final messenger = ScaffoldMessenger.of(context);
+                                  await _streamService.enableAllProfiles();
+                                  setDlgState(() {});
+                                  setState(() {});
+                                  messenger.showSnackBar(
+                                    const SnackBar(
+                                      backgroundColor: Color(0xFF16A34A),
+                                      content: Text('✅ All cameras activated for grid view!'),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ],
                           ),
                         ],
                       ),
@@ -3233,7 +3792,6 @@ class _CctvAttendanceKioskScreenState extends State<CctvAttendanceKioskScreen> {
 
                           return Container(
                             margin: const EdgeInsets.only(bottom: 10),
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                             decoration: BoxDecoration(
                               color: isCurrent ? const Color(0xFFF0FDF4) : const Color(0xFFF8FAFC),
                               borderRadius: BorderRadius.circular(12),
@@ -3242,98 +3800,263 @@ class _CctvAttendanceKioskScreenState extends State<CctvAttendanceKioskScreen> {
                                 width: isCurrent ? 1.5 : 1.0,
                               ),
                             ),
-                            child: Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(10),
-                                  decoration: BoxDecoration(
-                                    color: (isCurrent ? const Color(0xFF16A34A) : const Color(0xFF0F766E)).withValues(alpha: 0.12),
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: Icon(
-                                    cam.sourceType == CctvSourceType.webcam ? Icons.camera_alt_rounded : Icons.videocam_rounded,
-                                    color: isCurrent ? const Color(0xFF16A34A) : const Color(0xFF0F766E),
-                                    size: 22,
-                                  ),
-                                ),
-                                const SizedBox(width: 14),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                            child: Material(
+                              color: Colors.transparent,
+                              borderRadius: BorderRadius.circular(12),
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(12),
+                                onTap: () async {
+                                  await _switchCamera(cam);
+                                  setDlgState(() {});
+                                  setState(() {});
+                                },
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                  child: Row(
                                     children: [
-                                      Row(
-                                        children: [
-                                          Text(
-                                            cam.name,
-                                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0F172A)),
-                                          ),
-                                          if (isCurrent) ...[
-                                            const SizedBox(width: 8),
-                                            Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                              decoration: BoxDecoration(
-                                                color: const Color(0xFF16A34A),
-                                                borderRadius: BorderRadius.circular(4),
-                                              ),
-                                              child: const Text('ACTIVE LIVE', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.white)),
+                                      Container(
+                                        padding: const EdgeInsets.all(10),
+                                        decoration: BoxDecoration(
+                                          color: (isCurrent ? const Color(0xFF16A34A) : const Color(0xFF0F766E)).withValues(alpha: 0.12),
+                                          borderRadius: BorderRadius.circular(10),
+                                        ),
+                                        child: Icon(
+                                          cam.sourceType == CctvSourceType.webcam ? Icons.camera_alt_rounded : Icons.videocam_rounded,
+                                          color: isCurrent ? const Color(0xFF16A34A) : const Color(0xFF0F766E),
+                                          size: 22,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 14),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Wrap(
+                                              crossAxisAlignment: WrapCrossAlignment.center,
+                                              spacing: 6,
+                                              runSpacing: 4,
+                                              children: [
+                                                Text(
+                                                  cam.name,
+                                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0F172A)),
+                                                ),
+                                                if (isCurrent)
+                                                  Container(
+                                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                    decoration: BoxDecoration(
+                                                      color: const Color(0xFFD97706),
+                                                      borderRadius: BorderRadius.circular(4),
+                                                    ),
+                                                    child: const Row(
+                                                      mainAxisSize: MainAxisSize.min,
+                                                      children: [
+                                                        Icon(Icons.star_rounded, size: 10, color: Colors.white),
+                                                        SizedBox(width: 2),
+                                                        Text('SINGLE CAM MAIN', style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: Colors.white)),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                if (cam.isEnabled)
+                                                  Container(
+                                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                    decoration: BoxDecoration(
+                                                      color: const Color(0xFF16A34A),
+                                                      borderRadius: BorderRadius.circular(4),
+                                                    ),
+                                                    child: const Row(
+                                                      mainAxisSize: MainAxisSize.min,
+                                                      children: [
+                                                        Icon(Icons.check_circle_rounded, size: 10, color: Colors.white),
+                                                        SizedBox(width: 3),
+                                                        Text('ACTIVE IN GRID', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.white)),
+                                                      ],
+                                                    ),
+                                                  )
+                                                else
+                                                  Container(
+                                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                    decoration: BoxDecoration(
+                                                      color: const Color(0xFFF1F5F9),
+                                                      borderRadius: BorderRadius.circular(4),
+                                                      border: Border.all(color: Colors.grey.shade300),
+                                                    ),
+                                                    child: const Text('STANDBY (Disabled)', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Color(0xFF64748B))),
+                                                  ),
+                                                Container(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                  decoration: BoxDecoration(
+                                                    color: cam.role == 'madarsa_gate'
+                                                        ? const Color(0xFF2563EB).withValues(alpha: 0.15)
+                                                        : (cam.role == 'classroom'
+                                                            ? const Color(0xFFD97706).withValues(alpha: 0.15)
+                                                            : const Color(0xFF64748B).withValues(alpha: 0.15)),
+                                                    borderRadius: BorderRadius.circular(4),
+                                                  ),
+                                                  child: Text(
+                                                    cam.role == 'madarsa_gate'
+                                                        ? '🚪 Gate In/Out'
+                                                        : (cam.role == 'classroom' ? '🏫 Classroom' : '🌐 All-in-One'),
+                                                    style: TextStyle(
+                                                      fontSize: 9,
+                                                      fontWeight: FontWeight.bold,
+                                                      color: cam.role == 'madarsa_gate'
+                                                          ? const Color(0xFF1D4ED8)
+                                                          : (cam.role == 'classroom' ? const Color(0xFFB45309) : const Color(0xFF475569)),
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                            const SizedBox(height: 3),
+                                            Text(
+                                              cam.sourceType == CctvSourceType.webcam
+                                                  ? 'USB Webcam Index #${cam.cameraIndex}'
+                                                  : cam.ipUrl,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: TextStyle(fontSize: 11, color: Colors.grey.shade600, fontFamily: 'monospace'),
                                             ),
                                           ],
-                                          const SizedBox(width: 6),
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                            decoration: BoxDecoration(
-                                              color: cam.role == 'madarsa_gate'
-                                                  ? const Color(0xFF2563EB).withValues(alpha: 0.15)
-                                                  : (cam.role == 'classroom'
-                                                      ? const Color(0xFFD97706).withValues(alpha: 0.15)
-                                                      : const Color(0xFF64748B).withValues(alpha: 0.15)),
-                                              borderRadius: BorderRadius.circular(4),
+                                        ),
+                                      ),
+                                      // Grid Active toggle switch
+                                      Tooltip(
+                                        message: cam.isEnabled ? 'Active in Grid (Click to disable)' : 'Standby / Disabled (Click to enable in grid)',
+                                        child: Switch(
+                                          value: cam.isEnabled,
+                                          activeThumbColor: const Color(0xFF16A34A),
+                                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                          onChanged: (val) async {
+                                            await _streamService.toggleProfileEnabled(cam.id, val);
+                                            setDlgState(() {});
+                                            setState(() {});
+                                          },
+                                        ),
+                                      ),
+                                      // Quick Test Connection
+                                      IconButton(
+                                        icon: const Icon(Icons.wifi_find_rounded, size: 18, color: Color(0xFF0284C7)),
+                                        tooltip: 'Quick Test Connection',
+                                        onPressed: () async {
+                                          final messenger = ScaffoldMessenger.of(context);
+                                          messenger.showSnackBar(
+                                            SnackBar(
+                                              content: Text('Testing connection to ${cam.name} (${cam.ipUrl})...'),
+                                              duration: const Duration(seconds: 1),
                                             ),
-                                            child: Text(
-                                              cam.role == 'madarsa_gate'
-                                                  ? '🚪 Gate In/Out'
-                                                  : (cam.role == 'classroom' ? '🏫 Classroom' : '🌐 All-in-One'),
-                                              style: TextStyle(
-                                                fontSize: 9,
-                                                fontWeight: FontWeight.bold,
-                                                color: cam.role == 'madarsa_gate'
-                                                    ? const Color(0xFF1D4ED8)
-                                                    : (cam.role == 'classroom' ? const Color(0xFFB45309) : const Color(0xFF475569)),
+                                          );
+                                          final res = await _streamService.testCameraConnection(cam.toConfig());
+                                          messenger.hideCurrentSnackBar();
+                                          messenger.showSnackBar(
+                                            SnackBar(
+                                              backgroundColor: res['success'] == true ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
+                                              content: Text(res['success'] == true
+                                                  ? '✅ ${cam.name} is ONLINE & Connected!'
+                                                  : '⚠️ ${cam.name} is Offline: ${res['message']}'),
+                                              duration: const Duration(seconds: 3),
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                      // Edit Camera
+                                      IconButton(
+                                        icon: const Icon(Icons.edit_rounded, size: 18, color: Color(0xFF0F766E)),
+                                        tooltip: 'Edit Camera',
+                                        onPressed: () {
+                                          _showAddEditCameraModal(ctx, setDlgState, existing: cam);
+                                        },
+                                      ),
+                                      // More Actions Menu
+                                      PopupMenuButton<String>(
+                                        icon: const Icon(Icons.more_vert_rounded, size: 20, color: Color(0xFF64748B)),
+                                        tooltip: 'More Actions',
+                                        offset: const Offset(0, 36),
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                        onSelected: (val) async {
+                                          final messenger = ScaffoldMessenger.of(context);
+                                          if (val == 'main') {
+                                            await _switchCamera(cam);
+                                            setDlgState(() {});
+                                            setState(() {});
+                                          } else if (val == 'apply_all') {
+                                            await _streamService.applySourceToAllProfiles(cam.id);
+                                            setDlgState(() {});
+                                            setState(() {});
+                                            messenger.showSnackBar(
+                                              SnackBar(
+                                                backgroundColor: const Color(0xFF0F766E),
+                                                content: Text('✅ "${cam.name}" applied to all grid tiles!'),
+                                                duration: const Duration(seconds: 2),
+                                              ),
+                                            );
+                                          } else if (val == 'clone') {
+                                            await _streamService.duplicateCameraProfile(cam.id);
+                                            setDlgState(() {});
+                                            setState(() {});
+                                            messenger.showSnackBar(
+                                              SnackBar(
+                                                backgroundColor: const Color(0xFF0F766E),
+                                                content: Text('✅ "${cam.name}" cloned into a new Grid Tile! Both stream simultaneously.'),
+                                                duration: const Duration(seconds: 2),
+                                              ),
+                                            );
+                                          } else if (val == 'delete') {
+                                            await _streamService.deleteCameraProfile(cam.id);
+                                            setDlgState(() {});
+                                            setState(() {});
+                                          }
+                                        },
+                                        itemBuilder: (context) => [
+                                          if (!isCurrent)
+                                            const PopupMenuItem<String>(
+                                              value: 'main',
+                                              child: Row(
+                                                children: [
+                                                  Icon(Icons.play_arrow_rounded, color: Color(0xFF0F766E), size: 18),
+                                                  SizedBox(width: 10),
+                                                  Text('Set as Single-Cam Main View', style: TextStyle(fontSize: 12)),
+                                                ],
                                               ),
                                             ),
+                                          const PopupMenuItem<String>(
+                                            value: 'apply_all',
+                                            child: Row(
+                                              children: [
+                                                Icon(Icons.copy_all_rounded, color: Color(0xFF0F766E), size: 18),
+                                                SizedBox(width: 10),
+                                                Text('Apply Source to All Grids', style: TextStyle(fontSize: 12)),
+                                              ],
+                                            ),
                                           ),
+                                          const PopupMenuItem<String>(
+                                            value: 'clone',
+                                            child: Row(
+                                              children: [
+                                                Icon(Icons.add_to_photos_rounded, color: Color(0xFF7C3AED), size: 18),
+                                                SizedBox(width: 10),
+                                                Text('Clone / Duplicate to New Tile', style: TextStyle(fontSize: 12)),
+                                              ],
+                                            ),
+                                          ),
+                                          if (_streamService.cameraProfiles.length > 1) ...[
+                                            const PopupMenuDivider(height: 6),
+                                            const PopupMenuItem<String>(
+                                              value: 'delete',
+                                              child: Row(
+                                                children: [
+                                                  Icon(Icons.delete_outline_rounded, color: Color(0xFFDC2626), size: 18),
+                                                  SizedBox(width: 10),
+                                                  Text('Delete Camera', style: TextStyle(fontSize: 12, color: Color(0xFFDC2626))),
+                                                ],
+                                              ),
+                                            ),
+                                          ],
                                         ],
-                                      ),
-                                      const SizedBox(height: 3),
-                                      Text(
-                                        cam.sourceType == CctvSourceType.webcam
-                                            ? 'USB Webcam Index #${cam.cameraIndex}'
-                                            : cam.ipUrl,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(fontSize: 11, color: Colors.grey.shade600, fontFamily: 'monospace'),
                                       ),
                                     ],
                                   ),
                                 ),
-                                IconButton(
-                                  icon: const Icon(Icons.edit_rounded, size: 18, color: Color(0xFF0F766E)),
-                                  tooltip: 'Edit Camera',
-                                  onPressed: () {
-                                    _showAddEditCameraModal(ctx, setDlgState, existing: cam);
-                                  },
-                                ),
-                                if (_streamService.cameraProfiles.length > 1)
-                                  IconButton(
-                                    icon: const Icon(Icons.delete_outline_rounded, size: 18, color: Color(0xFFDC2626)),
-                                    tooltip: 'Delete Camera',
-                                    onPressed: () async {
-                                      await _streamService.deleteCameraProfile(cam.id);
-                                      setDlgState(() {});
-                                      setState(() {});
-                                    },
-                                  ),
-                              ],
+                              ),
                             ),
                           );
                         }),
@@ -3380,6 +4103,9 @@ class _CctvAttendanceKioskScreenState extends State<CctvAttendanceKioskScreen> {
                     password: passCtrl.text.trim(),
                   );
                   await _streamService.startStream(newCfg);
+                  if (_isMultiCamMode) {
+                    await _streamService.startMultiCameraStreams(_streamService.cameraProfiles);
+                  }
 
                   // Save configuration to SharedPreferences
                   final prefs = await SharedPreferences.getInstance();
@@ -3413,7 +4139,7 @@ class _CctvAttendanceKioskScreenState extends State<CctvAttendanceKioskScreen> {
 
   void _showAddEditCameraModal(BuildContext parentCtx, StateSetter parentSetState, {CctvCameraProfile? existing}) {
     final nameCtrl = TextEditingController(text: existing?.name ?? 'Camera ${_streamService.cameraProfiles.length + 1}');
-    final ipUrlCtrl = TextEditingController(text: existing?.ipUrl ?? 'http://192.168.1.100:8080/shot.jpg');
+    final ipUrlCtrl = TextEditingController(text: existing?.ipUrl ?? '192.168.1.64');
     final userCtrl = TextEditingController(text: existing?.username ?? '');
     final passCtrl = TextEditingController(text: existing?.password ?? '');
     CctvSourceType selectedSource = existing?.sourceType ?? CctvSourceType.ipCamera;
@@ -3422,6 +4148,7 @@ class _CctvAttendanceKioskScreenState extends State<CctvAttendanceKioskScreen> {
     String? testMsg;
     bool? testOk;
     bool isTestingCam = false;
+    Uint8List? sampleFrameBytes;
 
     showDialog(
       context: parentCtx,
@@ -3490,61 +4217,127 @@ class _CctvAttendanceKioskScreenState extends State<CctvAttendanceKioskScreen> {
                     ),
                     const SizedBox(height: 12),
                     if (selectedSource == CctvSourceType.ipCamera) ...[
-                      // Presets
-                      const Text('Quick Presets:', style: TextStyle(fontSize: 11, color: Colors.grey)),
-                      const SizedBox(height: 4),
+                      // Quick Brand / Universal IP Helpers
+                      const Text('Quick Brand Helpers (Click to pre-fill IP):', style: TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 6),
                       Wrap(
                         spacing: 6,
+                        runSpacing: 6,
                         children: [
                           ActionChip(
-                            label: const Text('📱 Mobile IP', style: TextStyle(fontSize: 11)),
+                            avatar: const Icon(Icons.auto_awesome, size: 14, color: Color(0xFF0F766E)),
+                            label: const Text('✨ Auto-Detect IP / Port', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                            onPressed: () async {
+                              final input = ipUrlCtrl.text.trim();
+                              if (input.isNotEmpty) {
+                                setModalState(() {
+                                  testMsg = 'Probing $input for active camera ports...';
+                                  testOk = null;
+                                });
+                                final res = await CctvDiscoveryService.probeSingleIp(input);
+                                if (res != null) {
+                                  ipUrlCtrl.text = res.suggestedStreamUrl ?? (res.port != 80 && res.port != 554 ? '${res.ip}:${res.port}' : res.ip);
+                                  setModalState(() {
+                                    testMsg = 'Auto-detected ${res.brand} on port ${res.port}! ✅';
+                                    testOk = true;
+                                  });
+                                } else {
+                                  setModalState(() {
+                                    testMsg = 'Device at $input did not respond on common camera ports.';
+                                    testOk = false;
+                                  });
+                                }
+                              } else {
+                                setModalState(() {
+                                  testMsg = 'Searching local Wi-Fi & network for online cameras...';
+                                  testOk = null;
+                                });
+                                final found = await CctvDiscoveryService.discoverNetworkCameras();
+                                setModalState(() {
+                                  if (found.isNotEmpty) {
+                                    ipUrlCtrl.text = found.first.suggestedStreamUrl ?? (found.first.port != 80 && found.first.port != 554 ? '${found.first.ip}:${found.first.port}' : found.first.ip);
+                                    testMsg = 'Auto-discovered ${found.first.brand} (${found.first.ip})! ✅';
+                                    testOk = true;
+                                  } else {
+                                    testMsg = 'No online cameras detected on Wi-Fi. Please enter camera IP manually below.';
+                                    testOk = false;
+                                  }
+                                });
+                              }
+                            },
+                          ),
+                          ActionChip(
+                            avatar: const Icon(Icons.phone_android_rounded, size: 14, color: Color(0xFF7C3AED)),
+                            label: const Text('📱 Mobile IP Webcam', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
                             onPressed: () {
-                              ipUrlCtrl.text = 'http://192.168.1.50:8080/shot.jpg';
+                              final cur = ipUrlCtrl.text.trim();
+                              if (cur.isNotEmpty) {
+                                final host = cur.replaceAll(RegExp(r'^https?://'), '').split('/')[0].split(':')[0];
+                                ipUrlCtrl.text = '$host:8080';
+                              } else {
+                                ipUrlCtrl.text = '192.168.1.50:8080';
+                              }
                               setModalState(() {});
                             },
                           ),
                           ActionChip(
-                            label: const Text('📹 Hikvision', style: TextStyle(fontSize: 11)),
+                            avatar: const Icon(Icons.videocam_rounded, size: 14, color: Color(0xFFDC2626)),
+                            label: const Text('📹 Hikvision', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
                             onPressed: () {
-                              ipUrlCtrl.text = 'http://192.168.1.64/ISAPI/Streaming/channels/101/picture';
+                              final cur = ipUrlCtrl.text.trim();
+                              if (cur.isNotEmpty) {
+                                final host = cur.replaceAll(RegExp(r'^https?://'), '').split('/')[0].split(':')[0];
+                                ipUrlCtrl.text = host;
+                              } else {
+                                ipUrlCtrl.text = '192.168.1.64';
+                              }
                               setModalState(() {});
                             },
                           ),
                           ActionChip(
-                            label: const Text('📹 Hikvision Snapshot', style: TextStyle(fontSize: 11)),
+                            avatar: const Icon(Icons.camera_alt_rounded, size: 14, color: Color(0xFF2563EB)),
+                            label: const Text('🎥 CP Plus / Dahua', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
                             onPressed: () {
-                              ipUrlCtrl.text = 'http://192.168.1.64/ISAPI/Streaming/channels/101/picture';
+                              final cur = ipUrlCtrl.text.trim();
+                              if (cur.isNotEmpty) {
+                                final host = cur.replaceAll(RegExp(r'^https?://'), '').split('/')[0].split(':')[0];
+                                ipUrlCtrl.text = host;
+                              } else {
+                                ipUrlCtrl.text = '192.168.1.250';
+                              }
                               setModalState(() {});
                             },
                           ),
                           ActionChip(
-                            label: const Text('⚡ Hikvision NVR (RTSP)', style: TextStyle(fontSize: 11)),
+                            avatar: const Icon(Icons.wifi_rounded, size: 14, color: Color(0xFF0D9488)),
+                            label: const Text('📡 TP-Link Tapo', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
                             onPressed: () {
-                              ipUrlCtrl.text = 'rtsp://192.168.1.64:554/Streaming/Channels/101';
-                              setModalState(() {});
-                            },
-                          ),
-                          ActionChip(
-                            label: const Text('🎥 CP Plus / Dahua', style: TextStyle(fontSize: 11)),
-                            onPressed: () {
-                              ipUrlCtrl.text = 'http://192.168.1.250/cgi-bin/snapshot.cgi';
+                              final cur = ipUrlCtrl.text.trim();
+                              if (cur.isNotEmpty) {
+                                final host = cur.replaceAll(RegExp(r'^https?://'), '').split('/')[0].split(':')[0];
+                                ipUrlCtrl.text = host;
+                              } else {
+                                ipUrlCtrl.text = '192.168.1.100';
+                              }
                               setModalState(() {});
                             },
                           ),
                         ],
                       ),
-                      const SizedBox(height: 8),
-                      const Text('Camera HTTP Stream / Snapshot URL:', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 10),
+                      const Text('Camera IP Address (Wi-Fi or LAN):', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 4),
                       TextField(
                         controller: ipUrlCtrl,
                         decoration: InputDecoration(
-                          hintText: 'http://192.168.1.100:8080/shot.jpg',
+                          hintText: 'e.g. 192.168.1.64 or 192.168.1.50:8080',
+                          helperText: 'Enter camera IP address — Direct Wi-Fi/LAN connection without complex NVR setup!',
+                          helperStyle: const TextStyle(fontSize: 10, color: Color(0xFF0F766E), fontWeight: FontWeight.w600),
                           contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                         ),
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 10),
                       Row(
                         children: [
                           Expanded(
@@ -3552,6 +4345,7 @@ class _CctvAttendanceKioskScreenState extends State<CctvAttendanceKioskScreen> {
                               controller: userCtrl,
                               decoration: InputDecoration(
                                 labelText: 'Username (Optional)',
+                                hintText: 'admin',
                                 contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                               ),
@@ -3564,6 +4358,7 @@ class _CctvAttendanceKioskScreenState extends State<CctvAttendanceKioskScreen> {
                               obscureText: true,
                               decoration: InputDecoration(
                                 labelText: 'Password (Optional)',
+                                hintText: '••••••',
                                 contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                               ),
@@ -3576,11 +4371,15 @@ class _CctvAttendanceKioskScreenState extends State<CctvAttendanceKioskScreen> {
                         icon: isTestingCam
                             ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2))
                             : const Icon(Icons.wifi_find_rounded, size: 16),
-                        label: Text(isTestingCam ? 'Testing...' : 'Test Connection'),
+                        label: Text(isTestingCam ? 'Auto-Negotiating Stream...' : 'Test Connection'),
                         onPressed: isTestingCam
                             ? null
                             : () async {
-                                setModalState(() => isTestingCam = true);
+                                setModalState(() {
+                                  isTestingCam = true;
+                                  sampleFrameBytes = null;
+                                  testMsg = null;
+                                });
                                 final res = await _streamService.testCameraConnection(CctvCameraConfig(
                                   sourceType: CctvSourceType.ipCamera,
                                   ipUrl: ipUrlCtrl.text.trim(),
@@ -3591,20 +4390,55 @@ class _CctvAttendanceKioskScreenState extends State<CctvAttendanceKioskScreen> {
                                   isTestingCam = false;
                                   testOk = res['success'] == true;
                                   testMsg = res['message']?.toString();
+                                  if (res['bytes'] is Uint8List) {
+                                    sampleFrameBytes = res['bytes'] as Uint8List;
+                                  }
                                   if (testOk == true && res['workingUrl'] != null) {
-                                    ipUrlCtrl.text = res['workingUrl'].toString();
+                                    var url = res['workingUrl'].toString();
+                                    if (url.toLowerCase().contains(':8080/video')) {
+                                      url = url.replaceAll(RegExp(r':8080/video\b', caseSensitive: false), ':8080/shot.jpg');
+                                    } else if (url.toLowerCase().endsWith('/video')) {
+                                      url = '${url.substring(0, url.length - 6)}/shot.jpg';
+                                    }
+                                    ipUrlCtrl.text = url;
                                   }
                                 });
                               },
                       ),
                       if (testMsg != null) ...[
-                        const SizedBox(height: 6),
-                        Text(
-                          testMsg!,
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: testOk == true ? const Color(0xFF15803D) : const Color(0xFFB91C1C),
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: testOk == true ? const Color(0xFFF0FDF4) : const Color(0xFFFEF2F2),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: testOk == true ? const Color(0xFFBBF7D0) : const Color(0xFFFECACA)),
+                          ),
+                          child: Row(
+                            children: [
+                              if (testOk == true && sampleFrameBytes != null) ...[
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(6),
+                                  child: Image.memory(
+                                    sampleFrameBytes!,
+                                    width: 56,
+                                    height: 42,
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                              ],
+                              Expanded(
+                                child: Text(
+                                  testMsg!,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: testOk == true ? const Color(0xFF15803D) : const Color(0xFFB91C1C),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
@@ -3834,124 +4668,3 @@ class _CctvHudPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _CctvHudPainter oldDelegate) => true;
 }
-
-/// Ultra-high performance, zero-cache, non-blocking video stream renderer.
-/// Directly decodes frames to ui.Image, paints via RawImage, and disposes GPU textures instantly.
-/// Includes single-flight backpressure: drops intermediate frames if the GPU is busy so the UI never lags.
-class _CctvStreamFrameRenderer extends StatefulWidget {
-  final ValueListenable<Uint8List?> frameNotifier;
-  final BoxFit fit;
-  final Widget? placeholder;
-
-  const _CctvStreamFrameRenderer({
-    required this.frameNotifier,
-    this.fit = BoxFit.contain,
-    this.placeholder,
-  });
-
-  @override
-  State<_CctvStreamFrameRenderer> createState() => _CctvStreamFrameRendererState();
-}
-
-class _CctvStreamFrameRendererState extends State<_CctvStreamFrameRenderer> {
-  ui.Image? _displayedImage;
-  bool _isDecoding = false;
-  Uint8List? _latestPendingBytes;
-
-  @override
-  void initState() {
-    super.initState();
-    widget.frameNotifier.addListener(_onFrameChanged);
-    final initial = widget.frameNotifier.value;
-    if (initial != null) {
-      _decode(initial);
-    }
-  }
-
-  @override
-  void didUpdateWidget(covariant _CctvStreamFrameRenderer oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.frameNotifier != widget.frameNotifier) {
-      oldWidget.frameNotifier.removeListener(_onFrameChanged);
-      widget.frameNotifier.addListener(_onFrameChanged);
-      final initial = widget.frameNotifier.value;
-      if (initial != null) {
-        _decode(initial);
-      }
-    }
-  }
-
-  @override
-  void dispose() {
-    widget.frameNotifier.removeListener(_onFrameChanged);
-    _displayedImage?.dispose();
-    _displayedImage = null;
-    _latestPendingBytes = null;
-    super.dispose();
-  }
-
-  void _onFrameChanged() {
-    final bytes = widget.frameNotifier.value;
-    if (!mounted) return;
-    if (bytes == null) {
-      _latestPendingBytes = null;
-      final old = _displayedImage;
-      if (old != null) {
-        setState(() {
-          _displayedImage = null;
-        });
-        old.dispose();
-      }
-      return;
-    }
-
-    if (_isDecoding) {
-      // Dynamic backpressure: drop intermediate queued frames
-      _latestPendingBytes = bytes;
-      return;
-    }
-
-    _decode(bytes);
-  }
-
-  Future<void> _decode(Uint8List bytes) async {
-    _isDecoding = true;
-    try {
-      final codec = await ui.instantiateImageCodec(bytes);
-      final frameInfo = await codec.getNextFrame();
-      final newImg = frameInfo.image;
-      codec.dispose();
-
-      if (!mounted) {
-        newImg.dispose();
-        return;
-      }
-
-      final oldImg = _displayedImage;
-      setState(() {
-        _displayedImage = newImg;
-      });
-      oldImg?.dispose(); // Instantly free DirectX/Vulkan texture
-    } catch (_) {
-    } finally {
-      _isDecoding = false;
-      if (mounted && _latestPendingBytes != null) {
-        final nextBytes = _latestPendingBytes!;
-        _latestPendingBytes = null;
-        _decode(nextBytes);
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (_displayedImage != null) {
-      return RawImage(
-        image: _displayedImage,
-        fit: widget.fit,
-      );
-    }
-    return widget.placeholder ?? const SizedBox.shrink();
-  }
-}
-

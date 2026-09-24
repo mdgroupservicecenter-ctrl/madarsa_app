@@ -13,6 +13,7 @@ class AppBrandingCubit extends Cubit<AppBranding> {
   static const String _prefNameUrKey = 'app_branding_name_ur_v1';
   static const String _prefTaglineKey = 'app_branding_tagline_v1';
   static const String _prefLogoPathKey = 'app_branding_logo_path_v1';
+  static const String _prefPrevNameEnKey = 'app_branding_prev_name_en_v1';
 
   AppBrandingCubit() : super(const AppBranding());
 
@@ -23,6 +24,7 @@ class AppBrandingCubit extends Cubit<AppBranding> {
       final nameEn = prefs.getString(_prefNameEnKey) ?? AppBranding.defaultAppNameEnglish;
       final nameUr = prefs.getString(_prefNameUrKey) ?? AppBranding.defaultAppNameUrdu;
       final tagline = prefs.getString(_prefTaglineKey) ?? AppBranding.defaultTagline;
+      final prevName = prefs.getString(_prefPrevNameEnKey);
       String? logoPath = prefs.getString(_prefLogoPathKey);
 
       // Verify logo path exists on disk
@@ -45,7 +47,10 @@ class AppBrandingCubit extends Cubit<AppBranding> {
 
       // Apply system-wide desktop, taskbar, and shortcut branding on Windows
       if (Platform.isWindows) {
-        WindowsSystemBrandingService.applySystemBranding(loadedState);
+        WindowsSystemBrandingService.applySystemBranding(
+          loadedState,
+          oldAppName: prevName,
+        );
       }
     } catch (e) {
       debugPrint('AppBrandingCubit.loadBranding error: $e');
@@ -115,9 +120,11 @@ class AppBrandingCubit extends Cubit<AppBranding> {
         }
       }
 
+      final oldNameEn = state.appNameEnglish;
       await prefs.setString(_prefNameEnKey, updatedNameEn);
       await prefs.setString(_prefNameUrKey, updatedNameUr);
       await prefs.setString(_prefTaglineKey, updatedTagline);
+      await prefs.setString(_prefPrevNameEnKey, oldNameEn);
 
       if (targetLogoPath != null) {
         await prefs.setString(_prefLogoPathKey, targetLogoPath);
@@ -134,7 +141,10 @@ class AppBrandingCubit extends Cubit<AppBranding> {
 
       // Apply system-wide desktop, taskbar, and shortcut branding on Windows
       if (Platform.isWindows) {
-        await WindowsSystemBrandingService.applySystemBranding(updatedState);
+        await WindowsSystemBrandingService.applySystemBranding(
+          updatedState,
+          oldAppName: oldNameEn,
+        );
       }
 
       return true;
@@ -148,6 +158,7 @@ class AppBrandingCubit extends Cubit<AppBranding> {
   Future<void> removeLogo() async {
     try {
       final prefs = await SharedPreferences.getInstance();
+      final oldNameEn = state.appNameEnglish;
       if (state.logoPath != null) {
         try {
           final file = File(state.logoPath!);
@@ -163,7 +174,10 @@ class AppBrandingCubit extends Cubit<AppBranding> {
       emit(clearedState);
 
       if (Platform.isWindows) {
-        await WindowsSystemBrandingService.applySystemBranding(clearedState);
+        await WindowsSystemBrandingService.applySystemBranding(
+          clearedState,
+          oldAppName: oldNameEn,
+        );
       }
     } catch (e) {
       debugPrint('AppBrandingCubit.removeLogo error: $e');
@@ -174,6 +188,7 @@ class AppBrandingCubit extends Cubit<AppBranding> {
   Future<void> resetToDefaults() async {
     try {
       final prefs = await SharedPreferences.getInstance();
+      final oldNameEn = state.appNameEnglish;
 
       if (state.logoPath != null) {
         try {
@@ -188,12 +203,16 @@ class AppBrandingCubit extends Cubit<AppBranding> {
       await prefs.remove(_prefNameUrKey);
       await prefs.remove(_prefTaglineKey);
       await prefs.remove(_prefLogoPathKey);
+      await prefs.remove(_prefPrevNameEnKey);
 
       const defaultState = AppBranding();
       emit(defaultState);
 
       if (Platform.isWindows) {
-        await WindowsSystemBrandingService.applySystemBranding(defaultState);
+        await WindowsSystemBrandingService.applySystemBranding(
+          defaultState,
+          oldAppName: oldNameEn,
+        );
       }
     } catch (e) {
       debugPrint('AppBrandingCubit.resetToDefaults error: $e');

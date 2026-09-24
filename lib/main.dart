@@ -14,9 +14,14 @@ import 'core/services/firebase_service.dart';
 import 'core/services/app_update_service.dart';
 import 'core/services/clock_theme_service.dart';
 import 'core/services/salat_time_service.dart';
+import 'core/services/windows_system_branding_service.dart';
+import 'dart:io';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  if (Platform.isWindows) {
+    await WindowsSystemBrandingService.ensureBackendRunning();
+  }
   await AppUpdateService.initVersion();
   await StorageModeService.init();
   await ClockThemeService.init();

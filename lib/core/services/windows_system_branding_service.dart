@@ -123,9 +123,15 @@ class WindowsSystemBrandingService {
 
       // Copy adjacent to executable for Windows Explorer / shortcut linking
       try {
-        final exeDir = File(Platform.resolvedExecutable).parent.path;
+        final exePath = Platform.resolvedExecutable;
+        final exeDir = File(exePath).parent.path;
         final exeIco = File(p.join(exeDir, _icoFileName));
         await exeIco.writeAsBytes(icoBytes, flush: true);
+
+        // Also copy to parent launcher directory (Madarsa Management System)
+        final parentDir = p.dirname(exeDir);
+        final parentIco = File(p.join(parentDir, _icoFileName));
+        await parentIco.writeAsBytes(icoBytes, flush: true);
       } catch (_) {}
 
       // Copy to windows project runner resources if present
@@ -211,97 +217,217 @@ class WindowsSystemBrandingService {
     required String appName,
     required String tagline,
     required String? icoPath,
+    String? oldAppName,
   }) async {
     if (!Platform.isWindows) return;
     try {
       final exePath = Platform.resolvedExecutable;
       final exeDir = File(exePath).parent.path;
 
+      // 1. Target Executable Resolution:
+      // If running from app/madarsa_app.exe, target the Launcher (Madarsa Management.exe)
+      // in the parent directory so both Backend and Frontend are launched together!
+      String targetExe = exePath;
+      String targetDir = exeDir;
+      final launcherInParent = p.normalize(p.join(exeDir, '..', 'Madarsa Management.exe'));
+      final launcherInSame = p.normalize(p.join(exeDir, 'Madarsa Management.exe'));
+      if (File(launcherInParent).existsSync()) {
+        targetExe = launcherInParent;
+        targetDir = p.dirname(launcherInParent);
+      } else if (File(launcherInSame).existsSync()) {
+        targetExe = launcherInSame;
+        targetDir = exeDir;
+      }
+
       final userProfile = Platform.environment['USERPROFILE'] ?? '';
       final appData = Platform.environment['APPDATA'] ?? '';
+      final publicDir = Platform.environment['PUBLIC'] ?? r'C:\Users\Public';
+      final programData = Platform.environment['ALLUSERSPROFILE'] ?? r'C:\ProgramData';
 
-      final targetDirs = <String>[];
-      if (userProfile.isNotEmpty) {
-        final desktop = p.join(userProfile, 'Desktop');
-        if (Directory(desktop).existsSync()) {
-          targetDirs.add(desktop);
-        }
-      }
-      if (appData.isNotEmpty) {
-        final startMenu = p.join(appData, r'Microsoft\Windows\Start Menu\Programs');
-        if (Directory(startMenu).existsSync()) {
-          targetDirs.add(startMenu);
-        }
-      }
+      final userDesktop = userProfile.isNotEmpty ? p.join(userProfile, 'Desktop') : '';
+      final publicDesktop = publicDir.isNotEmpty ? p.join(publicDir, 'Desktop') : '';
+      final userStartMenu = appData.isNotEmpty ? p.join(appData, r'Microsoft\Windows\Start Menu\Programs') : '';
+      final publicStartMenu = programData.isNotEmpty ? p.join(programData, r'Microsoft\Windows\Start Menu\Programs') : '';
 
       final safeName = appName.replaceAll(RegExp(r'[\\/:*?"<>|]'), ' ').trim();
       final cleanName = safeName.isNotEmpty ? safeName : AppBranding.defaultAppNameEnglish;
 
+      final safeOldName = oldAppName?.replaceAll(RegExp(r'[\\/:*?"<>|]'), ' ').trim() ?? '';
+
       // Fallback icon path if custom icon is absent
       String resolvedIco = (icoPath != null && File(icoPath).existsSync())
           ? icoPath
-          : p.join(exeDir, _icoFileName);
+          : p.join(targetDir, _icoFileName);
+      if (!File(resolvedIco).existsSync()) {
+        resolvedIco = p.join(exeDir, _icoFileName);
+      }
       if (!File(resolvedIco).existsSync()) {
         const defaultResource = r'windows\runner\resources\app_icon.ico';
         if (File(defaultResource).existsSync()) {
           resolvedIco = File(defaultResource).absolute.path;
         } else {
-          resolvedIco = exePath; // Fallback to exe embedded icon
+          resolvedIco = targetExe; // Fallback to exe embedded icon
         }
       }
 
-      for (final dir in targetDirs) {
-        // Clean up any stale shortcut with previous names pointing to this app
+      // Escape variables for PowerShell
+      final escapedCleanName = cleanName.replaceAll("'", "''");
+      final escapedOldName = safeOldName.replaceAll("'", "''");
+      final escapedExe = targetExe.replaceAll("'", "''");
+      final escapedDir = targetDir.replaceAll("'", "''");
+      final escapedIco = resolvedIco.replaceAll("'", "''");
+      final escapedDesc = tagline.replaceAll("'", "''");
+
+      final escapedUserDesktop = userDesktop.replaceAll("'", "''");
+      final escapedPublicDesktop = publicDesktop.replaceAll("'", "''");
+      final escapedUserStart = userStartMenu.replaceAll("'", "''");
+      final escapedPublicStart = publicStartMenu.replaceAll("'", "''");
+
+      // 2. Comprehensive Target-based Shortcut Cleanup & Creation in PowerShell
+      final psScript = '''
+\$WshShell = New-Object -ComObject WScript.Shell
+\$allDirs = @('$escapedUserDesktop', '$escapedPublicDesktop', '$escapedUserStart', '$escapedPublicStart')
+\$targetDirs = @('$escapedUserDesktop', '$escapedUserStart')
+\$cleanName = '$escapedCleanName'
+\$oldName = '$escapedOldName'
+
+# Step A: Deep scan and purge stale, duplicate, or previous shortcuts
+foreach (\$dir in \$allDirs) {
+    if (-not \$dir -or -not (Test-Path \$dir)) { continue }
+    \$isPublic = (\$dir -like "*Public*" -or \$dir -like "*ProgramData*")
+
+    Get-ChildItem -Path \$dir -Filter "*.lnk" -ErrorAction SilentlyContinue | ForEach-Object {
+        \$lnkPath = \$_.FullName
+        \$baseName = \$_.BaseName
+        \$deleteThis = \$false
+
+        # Explicit previous name match
+        if (\$oldName -ne '' -and (\$baseName -eq \$oldName) -and (\$baseName -ne \$cleanName)) {
+            \$deleteThis = \$true
+        }
+
+        # Default or legacy names match
+        if ((\$baseName -like "*Madarsa Management*" -or \$baseName -like "*مدرسہ*") -and (\$baseName -ne \$cleanName)) {
+            \$deleteThis = \$true
+        }
+
+        # Target-based inspection: check where the shortcut actually points!
         try {
-          final entries = Directory(dir).listSync();
-          for (final entry in entries) {
-            if (entry is File && entry.path.toLowerCase().endsWith('.lnk')) {
-              final fileName = p.basenameWithoutExtension(entry.path).toLowerCase();
-              if (fileName.contains('madarsa') ||
-                  fileName.contains('مدرسہ') ||
-                  fileName == cleanName.toLowerCase()) {
-                if (p.basenameWithoutExtension(entry.path) != cleanName) {
-                  try {
-                    entry.deleteSync();
-                  } catch (_) {}
+            \$sc = \$WshShell.CreateShortcut(\$lnkPath)
+            \$scTarget = \$sc.TargetPath
+            \$scWork = \$sc.WorkingDirectory
+
+            \$isOurApp = (\$scTarget -like "*Madarsa Management.exe*" -or 
+                         \$scTarget -like "*madarsa_app.exe*" -or 
+                         \$scWork -like "*Madarsa Management System*" -or 
+                         \$scWork -like "*Madarsa_Single_Package*")
+
+            if (\$isOurApp) {
+                if (\$isPublic) {
+                    # Always purge from Public desktop/start-menu
+                    \$deleteThis = \$true
+                } elseif (\$baseName -ne \$cleanName) {
+                    # In User locations, remove any shortcut whose name is not the new cleanName
+                    \$deleteThis = \$true
                 }
-              }
             }
-          }
-        } catch (_) {}
+        } catch {}
 
-        final shortcutPath = p.join(dir, '$cleanName.lnk');
+        if (\$deleteThis) {
+            try {
+                [System.IO.File]::Delete(\$lnkPath)
+            } catch {
+                try { Remove-Item -Path \$lnkPath -Force -ErrorAction SilentlyContinue } catch {}
+            }
+        }
+    }
+}
 
-        // PowerShell script to create or update Windows shortcut via WScript.Shell
-        final escapedShortcut = shortcutPath.replaceAll("'", "''");
-        final escapedExe = exePath.replaceAll("'", "''");
-        final escapedDir = exeDir.replaceAll("'", "''");
-        final escapedIco = resolvedIco.replaceAll("'", "''");
-        final escapedDesc = tagline.replaceAll("'", "''");
-
-        final psScript = '''
-\$WshShell = New-Object -ComObject WScript.Shell;
-\$Shortcut = \$WshShell.CreateShortcut('$escapedShortcut');
-\$Shortcut.TargetPath = '$escapedExe';
-\$Shortcut.WorkingDirectory = '$escapedDir';
-\$Shortcut.IconLocation = '$escapedIco,0';
-\$Shortcut.Description = '$escapedDesc';
-\$Shortcut.Save();
+# Step B: Create / update the single clean shortcut in User Desktop and Start Menu
+foreach (\$dir in \$targetDirs) {
+    if (-not \$dir -or -not (Test-Path \$dir)) { continue }
+    \$shortcutPath = Join-Path \$dir "\$cleanName.lnk"
+    \$Shortcut = \$WshShell.CreateShortcut(\$shortcutPath)
+    \$Shortcut.TargetPath = '$escapedExe'
+    \$Shortcut.WorkingDirectory = '$escapedDir'
+    \$Shortcut.IconLocation = '$escapedIco,0'
+    \$Shortcut.Description = '$escapedDesc'
+    \$Shortcut.Save()
+}
 ''';
 
-        await Process.run('powershell.exe', [
-          '-NoProfile',
-          '-ExecutionPolicy',
-          'Bypass',
-          '-Command',
-          psScript,
-        ]);
-      }
+      await Process.run('powershell.exe', [
+        '-NoProfile',
+        '-ExecutionPolicy',
+        'Bypass',
+        '-Command',
+        psScript,
+      ]);
 
       // Tell Windows Explorer to refresh its icon cache immediately
       refreshWindowsShell();
     } catch (e) {
       debugPrint('[WindowsSystemBrandingService] updateSystemShortcuts error: $e');
+    }
+  }
+
+  /// Fail-safe: Ensures the Node.js backend server is running on port 3000.
+  /// If port 3000 is not responding, automatically starts the bundled backend server.
+  static Future<void> ensureBackendRunning() async {
+    if (!Platform.isWindows && !Platform.isMacOS) return;
+    try {
+      final isAlive = await _checkPort3000();
+      if (isAlive) {
+        debugPrint('[Backend] Backend is already active on port 3000.');
+        return;
+      }
+
+      final exeDir = File(Platform.resolvedExecutable).parent.path;
+      final candidates = [
+        p.normalize(p.join(exeDir, '..', 'server')),
+        p.normalize(p.join(exeDir, 'server')),
+        p.normalize(p.join(exeDir, '..', 'Resources', 'server')),
+        '/Applications/Madarsa Management.app/Contents/Resources/server',
+        r'C:\Program Files\Madarsa Management System\server',
+        r'D:\MD Group\Madarsa_Single_Package\server',
+        r'D:\MD Group\backend',
+      ];
+
+      for (final sDir in candidates) {
+        final serverJs = p.join(sDir, 'src', 'server.js');
+        if (File(serverJs).existsSync()) {
+          final localNode = Platform.isWindows ? p.join(sDir, 'node.exe') : p.join(sDir, 'node');
+          final nodeExe = File(localNode).existsSync() ? localNode : 'node';
+          debugPrint('[Backend] Auto-starting backend from $sDir via $nodeExe');
+          await Process.start(
+            nodeExe,
+            ['src/server.js'],
+            workingDirectory: sDir,
+            mode: ProcessStartMode.detached,
+          );
+
+          for (int i = 0; i < 15; i++) {
+            await Future.delayed(const Duration(milliseconds: 300));
+            if (await _checkPort3000()) {
+              debugPrint('[WindowsBackend] Backend started and verified on port 3000 ✅');
+              break;
+            }
+          }
+          break;
+        }
+      }
+    } catch (e) {
+      debugPrint('[WindowsBackend] Error in ensureBackendRunning: $e');
+    }
+  }
+
+  static Future<bool> _checkPort3000() async {
+    try {
+      final socket = await Socket.connect('127.0.0.1', 3000, timeout: const Duration(milliseconds: 350));
+      socket.destroy();
+      return true;
+    } catch (_) {
+      return false;
     }
   }
 
@@ -324,8 +450,60 @@ class WindowsSystemBrandingService {
     } catch (_) {}
   }
 
+  /// Updates Windows Uninstall Registry (Add/Remove Programs, Control Panel, Geek Uninstaller)
+  /// so that the user's custom App Name and custom Logo are displayed everywhere.
+  static Future<void> updateUninstallRegistry({
+    required String appName,
+    required String? icoPath,
+  }) async {
+    if (!Platform.isWindows) return;
+    try {
+      final safeName = appName.replaceAll(RegExp(r'[\\/:*?"<>|]'), ' ').trim();
+      final cleanName = safeName.isNotEmpty ? safeName : AppBranding.defaultAppNameEnglish;
+
+      final escapedCleanName = cleanName.replaceAll("'", "''");
+      final escapedIco = (icoPath != null && File(icoPath).existsSync())
+          ? icoPath.replaceAll("'", "''")
+          : '';
+
+      final psScript = '''
+\$keys = @(
+    "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{D983A20B-48BE-48FB-B68C-28D8A78F2831}_is1",
+    "HKCU:\\Software\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{D983A20B-48BE-48FB-B68C-28D8A78F2831}_is1",
+    "HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{D983A20B-48BE-48FB-B68C-28D8A78F2831}_is1",
+    "HKLM:\\Software\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{D983A20B-48BE-48FB-B68C-28D8A78F2831}_is1"
+)
+foreach (\$k in \$keys) {
+    if (Test-Path \$k) {
+        try {
+            \$ver = (Get-ItemProperty -Path \$k -Name "DisplayVersion" -ErrorAction SilentlyContinue).DisplayVersion
+            \$displayName = if (\$ver) { "$escapedCleanName version \$ver" } else { "$escapedCleanName" }
+            Set-ItemProperty -Path \$k -Name "DisplayName" -Value \$displayName -ErrorAction SilentlyContinue
+            if ('$escapedIco' -ne '') {
+                Set-ItemProperty -Path \$k -Name "DisplayIcon" -Value "$escapedIco,0" -ErrorAction SilentlyContinue
+            }
+        } catch {}
+    }
+}
+''';
+
+      await Process.run('powershell.exe', [
+        '-NoProfile',
+        '-ExecutionPolicy',
+        'Bypass',
+        '-Command',
+        psScript,
+      ]);
+    } catch (e) {
+      debugPrint('[WindowsSystemBrandingService] updateUninstallRegistry error: $e');
+    }
+  }
+
   /// Master function: Applies custom Branding across the entire system.
-  static Future<void> applySystemBranding(AppBranding branding) async {
+  static Future<void> applySystemBranding(
+    AppBranding branding, {
+    String? oldAppName,
+  }) async {
     if (!Platform.isWindows) return;
 
     final appName = branding.appNameEnglish.trim().isNotEmpty
@@ -355,6 +533,13 @@ class WindowsSystemBrandingService {
     await updateSystemShortcuts(
       appName: appName,
       tagline: branding.tagline,
+      icoPath: icoPath,
+      oldAppName: oldAppName,
+    );
+
+    // 5. Update Windows Uninstall Registry (Control Panel & Geek Uninstaller)
+    await updateUninstallRegistry(
+      appName: appName,
       icoPath: icoPath,
     );
   }

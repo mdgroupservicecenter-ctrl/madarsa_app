@@ -23,10 +23,10 @@ class DatabaseHelper {
   }
 
   Future<String> _resolveDatabasePath() async {
-    if (Platform.isWindows) {
-      // 1. Primary Live Project Database on D: drive (contains all enrolled students & attendance data)
+    if (Platform.isWindows || Platform.isMacOS) {
+      // 1. Primary Live Project Database on D: drive (Windows development)
       const directPath = r'D:\MD Group\backend\database.sqlite';
-      if (File(directPath).existsSync()) {
+      if (Platform.isWindows && File(directPath).existsSync()) {
         return directPath;
       }
 
@@ -55,11 +55,19 @@ class DatabaseHelper {
       final serverDbExeDir = join(exeDir, 'server', 'database.sqlite');
       if (File(serverDbExeDir).existsSync()) return serverDbExeDir;
 
-      // 4. Standard Windows Installed path fallback
-      const installedServerDb = r'C:\Program Files\Madarsa Management System\server\database.sqlite';
-      if (File(installedServerDb).existsSync()) return installedServerDb;
+      // macOS app bundle Resources directory
+      if (Platform.isMacOS) {
+        final macBundleServerDb = normalize(join(exeDir, '..', 'Resources', 'server', 'database.sqlite'));
+        if (File(macBundleServerDb).existsSync()) return macBundleServerDb;
+      }
 
-      // 5. Fallback to AppData
+      // 4. Standard Windows Installed path fallback
+      if (Platform.isWindows) {
+        const installedServerDb = r'C:\Program Files\Madarsa Management System\server\database.sqlite';
+        if (File(installedServerDb).existsSync()) return installedServerDb;
+      }
+
+      // 5. Fallback to AppData / Application Support directory
       final appDocDir = await getApplicationSupportDirectory();
       final dbDir = Directory(join(appDocDir.path, 'databases'));
       if (!await dbDir.exists()) {

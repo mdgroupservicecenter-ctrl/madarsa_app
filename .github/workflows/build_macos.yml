@@ -1,13 +1,13 @@
-name: Build macOS Application (.app & .dmg)
+name: Build macOS Application (.pkg, .dmg & .iso)
 
 on:
   push:
     branches: [ main, master ]
-  workflow_dispatch: # Allows manual trigger from GitHub Actions tab
+  workflow_dispatch:
 
 jobs:
   build-macos:
-    name: Build macOS (.app & .dmg)
+    name: Build macOS Single-File Installers
     runs-on: macos-latest
 
     steps:
@@ -26,14 +26,53 @@ jobs:
       - name: ⚙️ Build macOS Release Application
         run: flutter build macos --release --no-tree-shake-icons
 
-      - name: 💿 Create DMG Installer and ZIP Bundle
+      - name: 💿 Bundle Backend, Node.js Universal Runtime & Create Single-File Installers
         run: |
-          APP_PATH="build/macos/Build/Products/Release/madarsa_app.app"
+          set -e
+          RAW_APP_PATH="build/macos/Build/Products/Release/madarsa_app.app"
+          APP_PATH="build/macos/Build/Products/Release/Madarsa Management.app"
           
-          # 1. Create ZIP of .app
-          zip -r -9 "Madarsa_App_macOS.zip" "$APP_PATH"
+          # Rename to clean branding name
+          mv "$RAW_APP_PATH" "$APP_PATH"
           
-          # 2. Create standalone installer DMG with Applications shortcut
+          SERVER_DEST="$APP_PATH/Contents/Resources/server"
+          mkdir -p "$SERVER_DEST"
+
+          # 1. Copy bundled backend files
+          echo "Copying server bundle files..."
+          cp -R server_bundle/* "$SERVER_DEST/"
+          
+          # 2. Download and assemble Universal Node.js binary (Apple Silicon ARM64 + Intel x86_64)
+          echo "Setting up Universal Node.js runtime..."
+          NODE_VER="v20.18.0"
+          curl -fsSL "https://nodejs.org/dist/${NODE_VER}/node-${NODE_VER}-darwin-arm64.tar.gz" -o node-arm64.tar.gz
+          curl -fsSL "https://nodejs.org/dist/${NODE_VER}/node-${NODE_VER}-darwin-x64.tar.gz" -o node-x64.tar.gz
+          tar -xzf node-arm64.tar.gz
+          tar -xzf node-x64.tar.gz
+          lipo -create \
+            "node-${NODE_VER}-darwin-arm64/bin/node" \
+            "node-${NODE_VER}-darwin-x64/bin/node" \
+            -output "$SERVER_DEST/node"
+          chmod +x "$SERVER_DEST/node"
+          rm -rf node-arm64.tar.gz node-x64.tar.gz node-${NODE_VER}-darwin-arm64 node-${NODE_VER}-darwin-x64
+
+          # 3. Install production npm dependencies for macOS inside server bundle
+          echo "Installing production npm packages for macOS..."
+          cd "$SERVER_DEST"
+          npm install --omit=dev
+          cd -
+
+          # 4. Set permissive permissions so SQLite and upload directories are read/write
+          chmod -R 777 "$SERVER_DEST"
+
+          # 5. Create 1-Click Apple Wizard Installer (.pkg)
+          echo "Building single-file .pkg installer..."
+          pkgbuild --install-location "/Applications" \
+            --component "$APP_PATH" \
+            "Madarsa_App_v0.0.0.3_macOS_Setup.pkg"
+
+          # 6. Create Apple Disk Image Single-File Installer (.dmg)
+          echo "Building single-file .dmg installer..."
           mkdir -p dmg_folder
           cp -R "$APP_PATH" dmg_folder/
           ln -s /Applications dmg_folder/Applications
@@ -45,28 +84,42 @@ jobs:
             -format UDZO \
             "Madarsa_App_v0.0.0.3_macOS.dmg"
 
-          # 3. Create 1-click wizard installer .pkg (No drag-and-drop needed!)
-          pkgbuild --install-location "/Applications" \
-            --component "$APP_PATH" \
-            "Madarsa_App_v0.0.0.3_macOS_Setup.pkg"
+          # 7. Create Hybrid ISO disc image
+          echo "Building single-file .iso disc image..."
+          hdiutil makehybrid \
+            -iso -joliet -hfs \
+            -default-volume-name "Madarsa Management" \
+            -ov \
+            -o "Madarsa_App_v0.0.0.3_macOS.iso" \
+            dmg_folder
+
+          # 8. Create portable .app ZIP archive
+          zip -r -9 "Madarsa_App_v0.0.0.3_macOS_Portable.zip" "$APP_PATH"
 
       - name: 📤 Upload PKG 1-Click Installer Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Madarsa-App-macOS-1Click-Installer-PKG
+          name: Madarsa_App_v0.0.0.3_macOS_Setup_PKG
           path: Madarsa_App_v0.0.0.3_macOS_Setup.pkg
           retention-days: 30
 
       - name: 📤 Upload DMG Installer Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Madarsa-App-macOS-Installer-DMG
+          name: Madarsa_App_v0.0.0.3_macOS_DMG
           path: Madarsa_App_v0.0.0.3_macOS.dmg
           retention-days: 30
 
-      - name: 📤 Upload .app ZIP Artifact
+      - name: 📤 Upload ISO Disc Image Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Madarsa-App-macOS-Bundle-ZIP
-          path: Madarsa_App_macOS.zip
+          name: Madarsa_App_v0.0.0.3_macOS_ISO
+          path: Madarsa_App_v0.0.0.3_macOS.iso
+          retention-days: 30
+
+      - name: 📤 Upload Portable ZIP Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Madarsa_App_v0.0.0.3_macOS_ZIP
+          path: Madarsa_App_v0.0.0.3_macOS_Portable.zip
           retention-days: 30
