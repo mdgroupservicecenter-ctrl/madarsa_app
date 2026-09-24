@@ -24,7 +24,7 @@ jobs:
         run: flutter pub get
 
       - name: ⚙️ Build macOS Release Application
-        run: flutter build macos --release
+        run: flutter build macos --release --no-tree-shake-icons
 
       - name: 💿 Create DMG Installer and ZIP Bundle
         run: |

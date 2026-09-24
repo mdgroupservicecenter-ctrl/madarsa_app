@@ -42,7 +42,7 @@ echo -e "${GREEN}✓ Xcode tools verified.${NC}"
 # 3. Get dependencies and build macOS release
 echo -e "\n${YELLOW}[3/4] Building macOS Release (.app bundle)...${NC}"
 flutter pub get
-flutter build macos --release
+flutter build macos --release --no-tree-shake-icons
 
 APP_SRC="build/macos/Build/Products/Release/madarsa_app.app"
 
