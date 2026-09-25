@@ -19,7 +19,7 @@ import 'dart:io';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  if (Platform.isWindows) {
+  if (Platform.isWindows || Platform.isMacOS) {
     await WindowsSystemBrandingService.ensureBackendRunning();
   }
   await AppUpdateService.initVersion();

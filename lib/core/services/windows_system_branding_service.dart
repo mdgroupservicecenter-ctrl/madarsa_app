@@ -383,41 +383,68 @@ foreach (\$dir in \$targetDirs) {
       }
 
       final exeDir = File(Platform.resolvedExecutable).parent.path;
+      final homeDir = Platform.environment['HOME'] ?? '';
       final candidates = [
+        p.normalize(p.join(exeDir, '..', 'Resources', 'server')),
         p.normalize(p.join(exeDir, '..', 'server')),
         p.normalize(p.join(exeDir, 'server')),
-        p.normalize(p.join(exeDir, '..', 'Resources', 'server')),
         '/Applications/Madarsa Management.app/Contents/Resources/server',
+        if (homeDir.isNotEmpty) p.join(homeDir, 'Applications', 'Madarsa Management.app', 'Contents', 'Resources', 'server'),
+        if (homeDir.isNotEmpty) p.join(homeDir, 'Downloads', 'Madarsa Management.app', 'Contents', 'Resources', 'server'),
         r'C:\Program Files\Madarsa Management System\server',
         r'D:\MD Group\Madarsa_Single_Package\server',
         r'D:\MD Group\backend',
       ];
 
       for (final sDir in candidates) {
+        if (sDir == null) continue;
         final serverJs = p.join(sDir, 'src', 'server.js');
         if (File(serverJs).existsSync()) {
           final localNode = Platform.isWindows ? p.join(sDir, 'node.exe') : p.join(sDir, 'node');
-          final nodeExe = File(localNode).existsSync() ? localNode : 'node';
-          debugPrint('[Backend] Auto-starting backend from $sDir via $nodeExe');
-          await Process.start(
-            nodeExe,
-            ['src/server.js'],
-            workingDirectory: sDir,
-            mode: ProcessStartMode.detached,
-          );
+          
+          if (!Platform.isWindows && File(localNode).existsSync()) {
+            try {
+              await Process.run('chmod', ['+x', localNode]);
+              await Process.run('xattr', ['-d', 'com.apple.quarantine', localNode]);
+            } catch (_) {}
+          }
 
-          for (int i = 0; i < 15; i++) {
+          String nodeExe = 'node';
+          if (File(localNode).existsSync()) {
+            nodeExe = localNode;
+          } else if (Platform.isMacOS) {
+            for (final sysNode in ['/usr/local/bin/node', '/opt/homebrew/bin/node', '/usr/bin/node']) {
+              if (File(sysNode).existsSync()) {
+                nodeExe = sysNode;
+                break;
+              }
+            }
+          }
+
+          debugPrint('[Backend] Auto-starting backend from $sDir via $nodeExe');
+          try {
+            await Process.start(
+              nodeExe,
+              ['src/server.js'],
+              workingDirectory: sDir,
+              mode: ProcessStartMode.detached,
+            );
+          } catch (pe) {
+            debugPrint('[Backend] Process.start error: $pe');
+          }
+
+          for (int i = 0; i < 25; i++) {
             await Future.delayed(const Duration(milliseconds: 300));
             if (await _checkPort3000()) {
-              debugPrint('[WindowsBackend] Backend started and verified on port 3000 ✅');
-              break;
+              debugPrint('[Backend] Backend started and verified on port 3000 ✅');
+              return;
             }
           }
           break;
         }
       }
     } catch (e) {
-      debugPrint('[WindowsBackend] Error in ensureBackendRunning: $e');
+      debugPrint('[Backend] Error in ensureBackendRunning: $e');
     }
   }
 

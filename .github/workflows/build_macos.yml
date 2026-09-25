@@ -65,6 +65,10 @@ jobs:
           # 4. Set permissive permissions so SQLite and upload directories are read/write
           chmod -R 777 "$SERVER_DEST"
 
+          # 5. Ad-hoc codesign bundled node binary and clear quarantine
+          codesign -s - --force "$SERVER_DEST/node" || true
+          xattr -cr "$APP_PATH" || true
+
           # 5. Create 1-Click Apple Wizard Installer (.pkg)
           echo "Building single-file .pkg installer..."
           pkgbuild --install-location "/Applications" \

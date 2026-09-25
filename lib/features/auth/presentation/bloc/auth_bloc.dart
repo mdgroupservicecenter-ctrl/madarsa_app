@@ -3,6 +3,7 @@ import '../../data/auth_repository.dart';
 import 'auth_event.dart';
 import 'auth_state.dart';
 import '../../../../core/network/api_client.dart';
+import '../../../../core/services/windows_system_branding_service.dart';
 
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final AuthRepository _repository;
@@ -45,6 +46,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     emit(AuthLoading());
     try {
+      await WindowsSystemBrandingService.ensureBackendRunning();
       final user = await _repository.login(event.username, event.password);
       emit(AuthAuthenticated(user: user));
     } catch (e) {
