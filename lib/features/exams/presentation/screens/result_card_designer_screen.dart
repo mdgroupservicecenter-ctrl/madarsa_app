@@ -1397,11 +1397,15 @@ class _ResultCardDesignerScreenState extends State<ResultCardDesignerScreen> {
         }
       } catch (_) {}
 
-      // 2. Scan both System Fonts (C:\Windows\Fonts) AND User AppData Fonts (%LOCALAPPDATA%\Microsoft\Windows\Fonts)
+      // 2. Scan both System Fonts AND User AppData Fonts
       final localAppData = Platform.environment['LOCALAPPDATA'] ?? '';
+      final homeDir = Platform.environment['HOME'] ?? '';
       final fontDirs = <Directory>[
-        Directory('C:\\Windows\\Fonts'),
-        if (localAppData.isNotEmpty) Directory('$localAppData\\Microsoft\\Windows\\Fonts'),
+        if (Platform.isWindows) Directory('C:\\Windows\\Fonts'),
+        if (Platform.isWindows && localAppData.isNotEmpty) Directory('$localAppData\\Microsoft\\Windows\\Fonts'),
+        if (Platform.isMacOS) Directory('/Library/Fonts'),
+        if (Platform.isMacOS) Directory('/System/Library/Fonts'),
+        if (Platform.isMacOS && homeDir.isNotEmpty) Directory('$homeDir/Library/Fonts'),
       ];
 
       final discoveredUserFonts = <String>[];
@@ -1461,23 +1465,25 @@ class _ResultCardDesignerScreenState extends State<ResultCardDesignerScreen> {
       }
 
       // 3. Get complete list of ALL installed system font families on Windows
-      final result = await Process.run('powershell', [
-        '-NoProfile',
-        '-NonInteractive',
-        '-Command',
-        'Add-Type -AssemblyName System.Drawing; (New-Object System.Drawing.Text.InstalledFontCollection).Families | Select-Object -ExpandProperty Name',
-      ]);
+      if (Platform.isWindows) {
+        final result = await Process.run('powershell', [
+          '-NoProfile',
+          '-NonInteractive',
+          '-Command',
+          'Add-Type -AssemblyName System.Drawing; (New-Object System.Drawing.Text.InstalledFontCollection).Families | Select-Object -ExpandProperty Name',
+        ]);
 
-      if (result.exitCode == 0) {
-        final systemFonts = (result.stdout as String)
-            .split('\n')
-            .map((s) => s.trim())
-            .where((s) => s.isNotEmpty)
-            .toList();
+        if (result.exitCode == 0) {
+          final systemFonts = (result.stdout as String)
+              .split('\n')
+              .map((s) => s.trim())
+              .where((s) => s.isNotEmpty)
+              .toList();
 
-        for (final sf in systemFonts) {
-          if (!discoveredUserFonts.contains(sf)) {
-            discoveredUserFonts.add(sf);
+          for (final sf in systemFonts) {
+            if (!discoveredUserFonts.contains(sf)) {
+              discoveredUserFonts.add(sf);
+            }
           }
         }
       }

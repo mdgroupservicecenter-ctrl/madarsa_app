@@ -897,7 +897,11 @@ class SeatingExportService {
                 try {
                   await launchUrl(Uri.file(actualSavePath));
                 } catch (_) {
-                  Process.run('explorer.exe', ['/select,', actualSavePath]);
+                  if (Platform.isWindows) {
+                    Process.run('explorer.exe', ['/select,', actualSavePath]);
+                  } else if (Platform.isMacOS) {
+                    Process.run('open', ['-R', actualSavePath]);
+                  }
                 }
               },
             ),

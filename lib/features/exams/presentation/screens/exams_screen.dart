@@ -5520,6 +5520,8 @@ class _ResultsTabState extends State<_ResultsTab>
                               onPressed: () {
                                 if (Platform.isWindows) {
                                   Process.run('explorer.exe', ['/select,', path]);
+                                } else if (Platform.isMacOS) {
+                                  Process.run('open', ['-R', path]);
                                 }
                               },
                             ),
@@ -5566,6 +5568,8 @@ class _ResultsTabState extends State<_ResultsTab>
                               onPressed: () {
                                 if (Platform.isWindows) {
                                   Process.run('explorer.exe', ['/select,', path]);
+                                } else if (Platform.isMacOS) {
+                                  Process.run('open', ['-R', path]);
                                 }
                               },
                             ),

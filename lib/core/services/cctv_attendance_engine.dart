@@ -1193,11 +1193,15 @@ class CctvAttendanceEngine {
         } else {
           speakText = 'Attendance marked. Welcome, $cleanName.';
         }
-        Process.run('powershell', [
-          '-NoProfile',
-          '-Command',
-          '[System.Media.SystemSounds]::Asterisk.Play(); \$s = New-Object -ComObject SAPI.SpVoice; \$s.Rate = 1; \$s.Speak("$speakText")',
-        ]).catchError((_) => ProcessResult(0, 0, '', ''));
+        if (Platform.isWindows) {
+          Process.run('powershell', [
+            '-NoProfile',
+            '-Command',
+            '[System.Media.SystemSounds]::Asterisk.Play(); \$s = New-Object -ComObject SAPI.SpVoice; \$s.Rate = 1; \$s.Speak("$speakText")',
+          ]).catchError((_) => ProcessResult(0, 0, '', ''));
+        } else if (Platform.isMacOS) {
+          Process.run('say', [speakText]).catchError((_) => ProcessResult(0, 0, '', ''));
+        }
       }
     } catch (_) {}
   }
