@@ -38,9 +38,21 @@ const SupabaseService = {
       const dataToSync = Array.isArray(records) ? records : [records];
       if (dataToSync.length === 0) return { success: true };
 
+      // Determine proper conflict target for PostgreSQL ON CONFLICT clause
+      let onConflict = 'id';
+      if (table === 'role_permissions') {
+        onConflict = 'role_id, permission_id';
+      } else if (table === 'user_roles') {
+        onConflict = 'user_id, role_id';
+      } else if (table === 'settings') {
+        onConflict = 'key';
+      } else if (table === 'activity_logs') {
+        onConflict = 'id';
+      }
+
       const { data, error } = await supabase
         .from(table)
-        .upsert(dataToSync, { onConflict: 'id' });
+        .upsert(dataToSync, { onConflict });
 
       if (error) {
         console.error(`[Supabase Sync Error] ${table}:`, error.message);
@@ -93,66 +105,52 @@ const SupabaseService = {
   },
 
   /**
-   * Bulk Sync All SQLite Tables into Supabase PostgreSQL in 1 go
+   * Bulk Sync ALL SQLite Tables into Supabase PostgreSQL in batches
    */
   async syncAllFromSQLite(sqliteDb) {
     if (!supabase) return { error: 'Supabase not configured' };
     console.log('[Supabase] Starting full database sync from local SQLite...');
 
-    const tables = [
-      'users',
-      'roles',
-      'departments',
-      'classes',
-      'courses',
-      'books',
-      'students',
-      'staff',
-      'staff_types',
-      'qualifications',
-      'attendance',
-      'fees',
-      'fee_types',
-      'contributors',
-      'donations',
-      'hostels',
-      'hostel_rooms',
-      'kitchen_stock',
-      'library_books',
-      'exams',
-      'academic_years',
-      'licenses',
-    ];
+    // Fetch all tables that exist in local SQLite
+    const allTables = sqliteDb.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name").all().map(t => t.name);
 
     const results = {};
 
-    for (const table of tables) {
+    for (const table of allTables) {
       try {
-        const rows = sqliteDb.prepare(`SELECT * FROM ${table}`).all();
+        const rows = sqliteDb.prepare(`SELECT * FROM "${table}"`).all();
         if (rows && rows.length > 0) {
           const cleanedRows = rows.map(r => {
             const copy = { ...r };
-            if (table === 'contributors') delete copy.updated_at;
-            if (table === 'hostel_rooms') delete copy.description;
-            if (table === 'library_books') {
-              delete copy.added_date;
-              delete copy.default_due_days;
-              delete copy.description;
-            }
+            // Ensure null or empty values don't fail JSON serialisation
             return copy;
           });
-          const res = await this.upsert(table, cleanedRows);
-          results[table] = { count: rows.length, success: !res.error };
+
+          const batchSize = 100;
+          let tableSuccess = true;
+          let tableError = null;
+
+          for (let i = 0; i < cleanedRows.length; i += batchSize) {
+            const batch = cleanedRows.slice(i, i + batchSize);
+            const res = await this.upsert(table, batch);
+            if (res.error) {
+              tableSuccess = false;
+              tableError = res.error;
+              break;
+            }
+          }
+
+          results[table] = { count: rows.length, success: tableSuccess, error: tableError };
         } else {
           results[table] = { count: 0, success: true };
         }
       } catch (err) {
-        // Table might not exist in SQLite
         results[table] = { count: 0, error: err.message };
       }
     }
 
-    console.log('[Supabase] Full sync completed:', results);
+    const totalSynced = Object.values(results).filter(r => r.success && r.count > 0).reduce((acc, r) => acc + r.count, 0);
+    console.log(`[Supabase] Full sync completed: ${totalSynced} rows across tables.`);
     return results;
   },
 };
