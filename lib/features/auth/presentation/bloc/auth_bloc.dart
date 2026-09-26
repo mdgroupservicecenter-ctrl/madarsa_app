@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../data/auth_repository.dart';
 import 'auth_event.dart';
@@ -50,7 +51,17 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       final user = await _repository.login(event.username, event.password);
       emit(AuthAuthenticated(user: user));
     } catch (e) {
-      final message = e.toString().replaceFirst('Exception: ', '');
+      String message = e.toString().replaceFirst('Exception: ', '');
+      if (e is DioException) {
+        if (e.response?.data is Map && e.response?.data['error'] != null) {
+          message = e.response!.data['error'].toString();
+        } else if (e.type == DioExceptionType.connectionTimeout ||
+                   e.type == DioExceptionType.sendTimeout ||
+                   e.type == DioExceptionType.receiveTimeout ||
+                   e.type == DioExceptionType.connectionError) {
+          message = 'Backend server se rabta nahi ho saka. Server start ho raha hai, dobara koshish karein.';
+        }
+      }
       emit(AuthError(message: message));
     }
   }

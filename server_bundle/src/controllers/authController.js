@@ -50,17 +50,21 @@ const authController = {
         { expiresIn: process.env.JWT_EXPIRES_IN || '7d' },
       );
 
-      db.prepare(`
-        INSERT INTO activity_logs (id, user_id, action, module, details, ip_address)
-        VALUES (?, ?, ?, ?, ?, ?)
-      `).run(
-        uuidv4(),
-        user.id,
-        'login',
-        'auth',
-        'User logged in',
-        req.ip,
-      );
+      try {
+        db.prepare(`
+          INSERT INTO activity_logs (id, user_id, action, module, details, ip_address)
+          VALUES (?, ?, ?, ?, ?, ?)
+        `).run(
+          uuidv4(),
+          user.id,
+          'login',
+          'auth',
+          'User logged in',
+          req.ip,
+        );
+      } catch (logErr) {
+        console.warn('[AuthController] Activity log recording failed (non-fatal):', logErr.message);
+      }
 
       res.json({
         token,

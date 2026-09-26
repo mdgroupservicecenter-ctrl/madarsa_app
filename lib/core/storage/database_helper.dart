@@ -55,10 +55,28 @@ class DatabaseHelper {
       final serverDbExeDir = join(exeDir, 'server', 'database.sqlite');
       if (File(serverDbExeDir).existsSync()) return serverDbExeDir;
 
-      // macOS app bundle Resources directory
+      // macOS writable Application Support directory & bundle seed copy
       if (Platform.isMacOS) {
-        final macBundleServerDb = normalize(join(exeDir, '..', 'Resources', 'server', 'database.sqlite'));
-        if (File(macBundleServerDb).existsSync()) return macBundleServerDb;
+        final homeDir = Platform.environment['HOME'] ?? '';
+        if (homeDir.isNotEmpty) {
+          final macUserDb = join(homeDir, 'Library', 'Application Support', 'MadarsaManagement', 'database.sqlite');
+          if (File(macUserDb).existsSync()) {
+            return macUserDb;
+          }
+          final macBundleServerDb = normalize(join(exeDir, '..', 'Resources', 'server', 'database.sqlite'));
+          if (File(macBundleServerDb).existsSync()) {
+            try {
+              final targetDir = Directory(join(homeDir, 'Library', 'Application Support', 'MadarsaManagement'));
+              if (!targetDir.existsSync()) {
+                targetDir.createSync(recursive: true);
+              }
+              File(macBundleServerDb).copySync(macUserDb);
+              return macUserDb;
+            } catch (_) {
+              return macBundleServerDb;
+            }
+          }
+        }
       }
 
       // 4. Standard Windows Installed path fallback

@@ -98,8 +98,14 @@ class _MadarsaAppState extends State<MadarsaApp> {
 
               // Auth-based routing
               home: BlocBuilder<AuthBloc, AuthState>(
+                buildWhen: (previous, current) {
+                  if (current is AuthLoading && previous is! AuthInitial) {
+                    return false;
+                  }
+                  return true;
+                },
                 builder: (context, authState) {
-                  if (authState is AuthLoading || authState is AuthInitial) {
+                  if (authState is AuthInitial) {
                     return const _SplashScreen();
                   }
                   if (authState is AuthAuthenticated) {

@@ -33,7 +33,9 @@ class ApiClient {
         handler.next(options);
       },
       onError: (error, handler) {
-        if (error.response?.statusCode == 401) {
+        final path = error.requestOptions.path;
+        final isAuthEndpoint = path.contains('/auth/login') || path.contains('/auth/register');
+        if (error.response?.statusCode == 401 && !isAuthEndpoint) {
           _handleUnauthorized();
           onUnauthorized?.call();
         }

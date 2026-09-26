@@ -40,8 +40,30 @@ app.use(morgan('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+function resolveUploadsDir() {
+  if (process.platform === 'darwin') {
+    const homeDir = process.env.HOME || ('/Users/' + (process.env.USER || 'default'));
+    const dir = path.join(homeDir, 'Library', 'Application Support', 'MadarsaManagement', 'uploads');
+    try {
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    } catch (_) {}
+    return dir;
+  }
+  const defaultDir = path.join(__dirname, '../uploads');
+  try {
+    if (!fs.existsSync(defaultDir)) fs.mkdirSync(defaultDir, { recursive: true });
+  } catch (_) {}
+  return defaultDir;
+}
+
+const uploadsDir = resolveUploadsDir();
+const bundledUploadsDir = path.join(__dirname, '../uploads');
+
 // Static files for uploads
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+app.use('/uploads', express.static(uploadsDir));
+if (uploadsDir !== bundledUploadsDir && fs.existsSync(bundledUploadsDir)) {
+  app.use('/uploads', express.static(bundledUploadsDir));
+}
 
 // Initialize database
 initializeDatabase();
@@ -73,9 +95,11 @@ app.use('/api/api/licensing', licenseRoutes);
 
 // Generic Profile Picture Upload
 const multer = require('multer');
-const photoDir = path.join(__dirname, '../uploads/profile_pictures');
+const photoDir = path.join(uploadsDir, 'profile_pictures');
 if (!fs.existsSync(photoDir)) {
-  fs.mkdirSync(photoDir, { recursive: true });
+  try {
+    fs.mkdirSync(photoDir, { recursive: true });
+  } catch (_) {}
 }
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -104,6 +128,29 @@ app.get('/api/health', (req, res) => {
     version: '1.0.0'
   });
 });
+
+// Supabase Cloud Sync Endpoint
+const SupabaseService = require('./services/supabaseService');
+const { db } = require('./config/database');
+
+app.post('/api/supabase/sync', async (req, res) => {
+  if (!SupabaseService.isConfigured()) {
+    return res.status(400).json({ error: 'Supabase not configured in .env' });
+  }
+  try {
+    const result = await SupabaseService.syncAllFromSQLite(db);
+    res.json({ success: true, result });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Periodic background sync if online (every 60 seconds)
+if (SupabaseService.isConfigured()) {
+  setInterval(() => {
+    SupabaseService.syncAllFromSQLite(db).catch(() => {});
+  }, 60000);
+}
 
 // 404 handler
 app.use((req, res) => {

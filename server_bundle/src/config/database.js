@@ -1,8 +1,46 @@
 const Database = require('better-sqlite3');
 const path = require('path');
+const fs = require('fs');
 require('dotenv').config({ path: path.join(__dirname, '../../.env') });
 
-const dbPath = path.resolve(__dirname, '../../', process.env.DB_PATH || './database.sqlite');
+function resolveDatabasePath() {
+  if (process.env.DB_PATH) {
+    return path.resolve(__dirname, '../../', process.env.DB_PATH);
+  }
+
+  if (process.platform === 'darwin') {
+    const homeDir = process.env.HOME || ('/Users/' + (process.env.USER || 'default'));
+    const appSupportDir = path.join(homeDir, 'Library', 'Application Support', 'MadarsaManagement');
+    try {
+      if (!fs.existsSync(appSupportDir)) {
+        fs.mkdirSync(appSupportDir, { recursive: true });
+      }
+    } catch (e) {
+      console.error('Failed to create App Support directory on macOS:', e.message);
+    }
+
+    const targetDb = path.join(appSupportDir, 'database.sqlite');
+    // If not exists in Application Support, copy from bundle seed if available
+    if (!fs.existsSync(targetDb)) {
+      const seedDb = path.resolve(__dirname, '../../database.sqlite');
+      if (fs.existsSync(seedDb)) {
+        try {
+          fs.copyFileSync(seedDb, targetDb);
+          console.log(`[Database] Seed database copied to writable macOS path: ${targetDb}`);
+        } catch (e) {
+          console.warn(`[Database] Could not copy seed database: ${e.message}`);
+          return seedDb;
+        }
+      }
+    }
+    return targetDb;
+  }
+
+  return path.resolve(__dirname, '../../database.sqlite');
+}
+
+const dbPath = resolveDatabasePath();
+console.log(`[Database] Connected to SQLite database: ${dbPath}`);
 const db = new Database(dbPath);
 
 const RBAC_MODULES = [
