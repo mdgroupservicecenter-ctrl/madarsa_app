@@ -130,7 +130,18 @@ const SupabaseService = {
       try {
         const rows = sqliteDb.prepare(`SELECT * FROM ${table}`).all();
         if (rows && rows.length > 0) {
-          const res = await this.upsert(table, rows);
+          const cleanedRows = rows.map(r => {
+            const copy = { ...r };
+            if (table === 'contributors') delete copy.updated_at;
+            if (table === 'hostel_rooms') delete copy.description;
+            if (table === 'library_books') {
+              delete copy.added_date;
+              delete copy.default_due_days;
+              delete copy.description;
+            }
+            return copy;
+          });
+          const res = await this.upsert(table, cleanedRows);
           results[table] = { count: rows.length, success: !res.error };
         } else {
           results[table] = { count: 0, success: true };
